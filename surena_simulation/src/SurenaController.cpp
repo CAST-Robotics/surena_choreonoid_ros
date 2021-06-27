@@ -28,8 +28,8 @@ class SurenaController : public SimpleController{
     ros::NodeHandle nh;
     int idx = 0;
     double dt;
-    double qref[12];
-    double qold[12];
+    double qref[29];
+    double qold[29];
     BodyPtr ioBody;
 
 public:
@@ -63,10 +63,9 @@ public:
             joint->setActuationMode(Link::JOINT_TORQUE);
             io->enableIO(joint);
             //qref.push_back(joint->q());
-            for (int i=0; i<12; i++){
-                qref[i] = joint->q();
-                qold[i] = qref[i];
-            }
+            qref[i] = joint->q();
+            qold[i] = qref[i];
+            
         }
        // qold = qref;
        
@@ -77,6 +76,7 @@ public:
     {
         ros::ServiceClient client2=nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
+
         jntangs.request.iter = idx;
         float jnts[12];
         if (result){
@@ -98,11 +98,11 @@ public:
                 qold[i] = q;
                 joint->u() = u;
             }
-            return true;
         }
         if (idx<3000){
             idx ++;
         }
+        return true;
     }
 };
 CNOID_IMPLEMENT_SIMPLE_CONTROLLER_FACTORY(SurenaController)

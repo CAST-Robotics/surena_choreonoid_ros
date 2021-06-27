@@ -9,7 +9,7 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.3;
+    shank_ = 0.36;
     thigh_ = 0.3535;
     torso_ = 0.09;
     isTrajAvailable_ = false;
@@ -132,7 +132,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double COM_height = req.COM_height;
     double step_len = req.step_length;
     int num_step = req.step_count;
-    double dt = 1.0/240.0;
+    double dt = 0.001;
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
@@ -184,6 +184,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         return false;
     }
     ROS_INFO("joint angles returned");
+    cout<<req.iter<<endl;
     return true;
 }
 
