@@ -27,12 +27,19 @@ class SurenaController : public SimpleController{
     bool result;
     ros::NodeHandle nh;
     int idx = 0;
+    double dt;
+    double qref[12];
+    double qold[12];
+    BodyPtr ioBody;
 
 public:
-
-    void setParams(){
-
+    virtual bool configure(SimpleControllerConfig* config) override
+    {
+        //config->sigChanged().connect();
+        return true;
     }
+
+
 
     virtual bool initialize(SimpleControllerIO* io) override
     {
@@ -41,11 +48,12 @@ public:
         traj.request.alpha = 0.5;
         traj.request.t_double_support = 0.2;
         traj.request.t_step = 0.8;
-        traj.request.step_length = 0.7;
-        traj.request.COM_height = 0.69;
+        traj.request.step_length = 0.5;
+        traj.request.COM_height = 0.6;
         traj.request.step_count = 6;
         traj.request.ankle_height = 0.02;
-        result = client.call(traj);
+        client.call(traj);
+        result = traj.response.result;
         ioBody = io->body();
         dt = io->timeStep();
 
@@ -54,9 +62,14 @@ public:
             Link* joint = ioBody->joint(i);
             joint->setActuationMode(Link::JOINT_TORQUE);
             io->enableIO(joint);
-            qref.push_back(joint->q());
+            //qref.push_back(joint->q());
+            for (int i=0; i<12; i++){
+                qref[i] = joint->q();
+                qold[i] = qref[i];
+            }
         }
-        qold = qref;
+       // qold = qref;
+       
 
         return true;
     }
@@ -64,11 +77,15 @@ public:
     {
         ros::ServiceClient client2=nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
-        jntangs.request.iter = 0;
-        double jnts[12];
+        jntangs.request.iter = idx;
+        float jnts[12];
         if (result){
 
-            jnts = client2.call(jntangs);
+            client2.call(jntangs);
+            //jnts = jntangs.response.jnt_angs;
+            for(int i = 0; i<12; i++){
+                jnts[i] = jntangs.response.jnt_angs[i];
+            }
             for (int j=0; j<6; j++){
                 qref[j] = jnts[j];
                 qref[13+j] = jnts[j+6];
@@ -83,8 +100,10 @@ public:
             }
             return true;
         }
-        if (idx<5800){
+        if (idx<3000){
             idx ++;
         }
     }
 };
+CNOID_IMPLEMENT_SIMPLE_CONTROLLER_FACTORY(SurenaController)
+

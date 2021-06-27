@@ -9,9 +9,9 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.36;
-    thigh_ = 0.37;
-    torso_ = 0.115;
+    shank_ = 0.3;
+    thigh_ = 0.3535;
+    torso_ = 0.09;
     isTrajAvailable_ = false;
 
     cout << "Robot Object has been Created" << endl;
@@ -114,7 +114,9 @@ double* Robot::geometricIK(MatrixXd p1, MatrixXd r1, MatrixXd p7, MatrixXd r7, b
     q[0] = atan2(-R(0,1),R(1,1));         // Hip Yaw
     q[1] = atan2(R(2,1), -R(0,1) * sin(q[0]) + R(1,1) * cos(q[0]));           // Hip Roll
     q[2] = atan2(-R(2,0), R(2,2));        // Hip Pitch
-    return q;
+    //return q;
+    double* choreonoid_only = new double[6] {q[1], q[2], q[0], q[3], q[4], q[5]};
+    return choreonoid_only;
 }
 
 bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
