@@ -17,7 +17,7 @@ using namespace std;
 class _Link{
     friend class Robot;
     public:
-        _Link(short int ID, _Link* parentID, Vector3d a, Vector3d b, double m, Matrix3d inerta);
+        _Link(short int ID, _Link* parent, Vector3d a, Vector3d b, double m, Matrix3d inertia);
         ~_Link();
 
         double q();
@@ -28,6 +28,7 @@ class _Link{
         Matrix3d getRot();
 
         MatrixXd FK();
+        MatrixXd updateJacobian();
         
     private:
         ////////////////// Link Properties ///////////////////////
@@ -46,6 +47,7 @@ class _Link{
         
         double m_;              // mass
         Matrix3d I_;            // Inertia matrix
+
 
         //////////////////// private methods /////////////////////
         MatrixXd transformation();

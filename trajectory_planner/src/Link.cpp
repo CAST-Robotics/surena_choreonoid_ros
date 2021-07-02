@@ -1,12 +1,12 @@
 #include "Link.h"
 
- _Link::_Link(short int ID, _Link* parent, Vector3d a, Vector3d b, double m, Matrix3d inerta){
+_Link::_Link(short int ID, _Link* parent, Vector3d a, Vector3d b, double m, Matrix3d inertia){
     this->ID_ - ID;
     this->parent_ = parent;
     this->a_ = a;
     this->b_ = b;
     this->m_ = m;
-    this->I_ = inerta;
+    this->I_ = inertia;
 
     this->q_ = 0.0;
     this->dq_ = 0.0;
@@ -64,8 +64,8 @@ MatrixXd _Link::FK(){
     }
     else{
         this->parent_->FK();
-        this->p_ = this->parent_->R_ * this->b_ + this->parent_->p_;
-        this->R_ = this->parent_->R_ * this->rodrigues(this->a_, this->q_);
+        this->p_ = this->parent_->getRot() * this->b_ + this->parent_->p_;
+        this->R_ = this->parent_->getRot() * this->rodrigues(this->a_, this->q_);
         return this->transformation();
     }
 }
@@ -78,6 +78,26 @@ MatrixXd _Link::transformation(){
          this->R_(2,0), this->R_(2,1), this->R_(2,2), this->p_(2),
          0.0, 0.0, 0.0, 1.0;
     return T;
+}
+
+MatrixXd _Link::updateJacobian(){
+    vector<_Link> idx;
+    idx.push_back(*this);
+    _Link base = *(this->getParent());
+    while (base.getID() != 0){
+        base = *base.getParent();
+        idx.push_back(base);
+    }
+    MatrixXd jacobian =  MatrixXd::Zero(6,idx.size());
+    Vector3d target = base.getPose();
+    for(int n = idx.size() -1; n >= 0; n--){
+        _Link mom = *(idx[n].getParent());
+        Vector3d a = mom.getRot() * idx[n].a_;
+        jacobian.block<3,1>(0,n) = a.cross(target - idx[n].getPose());
+        jacobian.block<3,1>(3,n) = a;
+    }
+
+    return jacobian;
 }
 
 _Link::~_Link(){
