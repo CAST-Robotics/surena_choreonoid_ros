@@ -1,6 +1,6 @@
-float32[3] xi_ref
-float32[3] xi_dot_ref
-float32[3] xi_real
-float32 deltaZVRP
+Vector3d xi_ref
+Vector3d xi_dot_ref
+Vector3d xi_real
+Vector3d deltaZVRP
 ---
-float32[3] r_zmp_ref
+Vector3d r_zmp_ref

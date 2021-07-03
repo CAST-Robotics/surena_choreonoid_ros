@@ -19,7 +19,7 @@ PID::PID(double timeStep){
     this->intI_ = 0.0;
     this->prevoiusError_ = 0.0;
     this->dt_ = timeStep;
-    xi_error_[3] = {0.0, 0.0, 0.0};
+    xi_error_<<0.0, 0.0, 0.0;
     ros::init(argc, argv, "controller");
     ros::ServiceServer dcm_service = nh.advertise("dcmcontroller", dcmController);
     ros::ServiceServer com_service = nh.advertise("comcontroller", comController);
@@ -41,14 +41,12 @@ bool PID::dcmController(trajectory_planner::DCMController::Request &req,
                         trajectory_planner::DCMController::Response &res){
                             Matrix3d Kp = kp_*kp_;
                             Matrix3d Ki = ki_*ki_;
-                            for(int i=0; i<3; i++){
-                                xi_error[i] += req.xi_real[i] - req.xi_ref[i];
-                            }
-                            for(int i=0; i<3; i++){
-                                res.r_zmp_ref[i] = req.xi_ref[i] - ((req.xi_dot_ref[i])/sqrt(9.81/req.deltaZVRP)) + 
-                                (Kp(i,0)*(req.xi_real[0]-req.xi_ref[0]) + Kp(i,1)*(req.xi_real[1]-req.xi_ref[1]) + 
-                                Kp(i,2)*(req.xi_real[2]-req.xi_ref[2])) + (Ki(i,0)*xi_error[0] + Ki(i,1)*xi_error[1] + Ki(i,2)*xi_error[2]);    
-                            }
+                            
+                            xi_error += req.xi_real - req.xi_ref;
+                            
+                            res.r_zmp_ref = req.xi_ref - ((req.xi_dot_ref)/sqrt(9.81/req.deltaZVRP)) + 
+                            Kp*(req.xi_real-req.xi_ref) + Ki*xi_error_;    
+                            
                             return true;
                         }
 
