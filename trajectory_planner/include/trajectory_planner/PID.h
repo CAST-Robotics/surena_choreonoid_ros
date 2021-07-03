@@ -12,20 +12,26 @@
 
 class PID{
     public:
-        PID(Matrix3d kp, Matrix3d ki, Matrix3d kd, double timeStep);
+        PID(double timeStep);
 
     private:
-        ros::Nodehandle nh
+        ros::Nodehandle nh;
         // Controller Gains 
-        double kp_;
-        double ki_;
-        double kd_;
-
+        Matrix3d kp_;
+        Matrix3d ki_;
+        Matrix3d kd_;
+        Matrix3d kcom_;
+        Matrix3d kzmp_;
+        Vector3d x_error_
 
         double dt_;
 
         double prevoiusError_;   // Controller Previous Error
         double intI_;            // Controller Integrator
 
-        double getOutput(double deiredValue, double currentValue);
+        //double getOutput(double deiredValue, double currentValue);
+        bool dcmController(trajectory_planner::DCMController::Request &req,
+                           trajectory_planner::DCMController::Response &res);
+        bool comController(trajectory_planner::COMController::Request &req,
+                           trajectory_planner::COMController::Response &res);
 };

@@ -1,18 +1,28 @@
 #include "PID.h"
 
-PID::PID(Matrix3d kp, Matrix3d ki, Matrix3d kd, double timeStep){
-    this->kp_ = kp;
-    this->ki_ = ki;
-    this->kd_ = kd;
-    
+PID::PID(double timeStep){
+    kp_<<1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0;
+    ki_<<1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0;
+    kd_<<1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0,
+         1.0, 1.0, 1.0;
+    kzmp_<<1.0, 1.0, 1.0,
+           1.0, 1.0, 1.0,
+           1.0, 1.0, 1.0;
+    kcom_<<1.0, 1.0, 1.0,
+           1.0, 1.0, 1.0,
+           1.0, 1.0, 1.0;
     this->intI_ = 0.0;
     this->prevoiusError_ = 0.0;
     this->dt_ = timeStep;
-    this->xi_error_ = xi_error;
-    xi_error[3] = {0.0, 0.0, 0.0};
-    this->nh = nh;
-    ros::init(argc, argv, "dcm_controller");
-    ros::ServiceServer service = nh.advertise("dcmcontroller", dcmController)
+    xi_error_[3] = {0.0, 0.0, 0.0};
+    ros::init(argc, argv, "controller");
+    ros::ServiceServer dcm_service = nh.advertise("dcmcontroller", dcmController);
+    ros::ServiceServer com_service = nh.advertise("comcontroller", comController);
 }
 
 //double PID::getOutput(double desiredValue, double currentValue){
@@ -29,9 +39,8 @@ PID::PID(Matrix3d kp, Matrix3d ki, Matrix3d kd, double timeStep){
 
 bool PID::dcmController(trajectory_planner::DCMController::Request &req,
                         trajectory_planner::DCMController::Response &res){
-                            double r_ref[3];
-                            Matrix3d Kp = kp*kp;
-                            Matrix3d Ki = ki*ki;
+                            Matrix3d Kp = kp_*kp_;
+                            Matrix3d Ki = ki_*ki_;
                             for(int i=0; i<3; i++){
                                 xi_error[i] += req.xi_real[i] - req.xi_ref[i];
                             }
@@ -40,6 +49,11 @@ bool PID::dcmController(trajectory_planner::DCMController::Request &req,
                                 (Kp(i,0)*(req.xi_real[0]-req.xi_ref[0]) + Kp(i,1)*(req.xi_real[1]-req.xi_ref[1]) + 
                                 Kp(i,2)*(req.xi_real[2]-req.xi_ref[2])) + (Ki(i,0)*xi_error[0] + Ki(i,1)*xi_error[1] + Ki(i,2)*xi_error[2]);    
                             }
-                            return true
+                            return true;
                         }
 
+bool PID::comController(trajectory_planner::COMController::Request &req,
+                        trajectory_planner::COMController::Response &res){
+                            res.x_dot_star = req.x_dot_ref - kzmp_*(req.r_zmp_ref - req.r_zmp_real) + kcom_*(req.x_ref - req.x_real);
+                            return true;
+                        }
