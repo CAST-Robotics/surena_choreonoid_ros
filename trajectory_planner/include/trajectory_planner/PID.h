@@ -5,12 +5,17 @@
 #include <vector>
 #include "math.h"
 #include "cmath"
+#include <eigen3/Eigen/Eigen>
+#include <trajectory_planner/DCMController.h>
+#include <ros/ros.h>
+
 
 class PID{
     public:
-        PID(double kp, double ki, double kd, double timeStep);
+        PID(Matrix3d kp, Matrix3d ki, Matrix3d kd, double timeStep);
 
     private:
+        ros::Nodehandle nh
         // Controller Gains 
         double kp_;
         double ki_;

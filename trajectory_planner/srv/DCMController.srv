@@ -1,0 +1,6 @@
+float32[3] xi_ref
+float32[3] xi_dot_ref
+float32[3] xi_real
+float32 deltaZVRP
+---
+float32[3] r_zmp_ref
