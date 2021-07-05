@@ -1,7 +1,7 @@
 #include "Link.h"
 
 _Link::_Link(short int ID, _Link* parent, Vector3d a, Vector3d b, double m, Matrix3d inertia){
-    this->ID_ - ID;
+    this->ID_ = ID;
     this->parent_ = parent;
     this->a_ = a;
     this->b_ = b;
@@ -90,7 +90,7 @@ MatrixXd _Link::updateJacobian(){
     }
     MatrixXd jacobian =  MatrixXd::Zero(6,idx.size());
     Vector3d target = base.getPose();
-    for(int n = idx.size() -1; n >= 0; n--){
+    for(int n = idx.size() - 2; n >= 0; n--){
         _Link mom = *(idx[n].getParent());
         Vector3d a = mom.getRot() * idx[n].a_;
         jacobian.block<3,1>(0,n) = a.cross(target - idx[n].getPose());
