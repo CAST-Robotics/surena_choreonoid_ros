@@ -17,11 +17,12 @@ using namespace std;
 class _Link{
     friend class Robot;
     public:
-        _Link(short int ID, _Link* parent, Vector3d a, Vector3d b, double m, Matrix3d inertia);
+        _Link(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent = nullptr);
         ~_Link();
 
         double q();
         void update(double q, double dq, double ddq);
+        void initPose(Vector3d p, Matrix3d r);
         short int getID();
         _Link* getParent();
         Vector3d getPose();
