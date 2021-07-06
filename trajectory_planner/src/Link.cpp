@@ -100,7 +100,7 @@ MatrixXd _Link::updateJacobian(){
     cout << endl;
     MatrixXd jacobian =  MatrixXd::Zero(6,idx.size());
     Vector3d target = base.getPose();
-    for(int n = idx.size() -2; n >= 0; n--){
+    for(int n = idx.size() - 2; n >= 0; n--){
         _Link mom = *(idx[n].getParent());
         Vector3d a = mom.getRot() * idx[n].a_;
         jacobian.block<3,1>(0,n) = a.cross(target - idx[n].getPose());

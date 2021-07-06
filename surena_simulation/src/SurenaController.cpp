@@ -45,13 +45,13 @@ public:
     {
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-        traj.request.alpha = 0.5;
-        traj.request.t_double_support = 0.2;
+        traj.request.alpha = 0.3;
+        traj.request.t_double_support = 0.1;
         traj.request.t_step = 0.8;
         traj.request.step_length = 0.5;
         traj.request.COM_height = 0.6;
         traj.request.step_count = 6;
-        traj.request.ankle_height = 0.02;
+        traj.request.ankle_height = 0.1;
         client.call(traj);
         result = traj.response.result;
         ioBody = io->body();
@@ -99,7 +99,7 @@ public:
                 joint->u() = u;
             }
         }
-        if (idx<3000){
+        if (idx<6000){
             idx ++;
         }
         return true;
