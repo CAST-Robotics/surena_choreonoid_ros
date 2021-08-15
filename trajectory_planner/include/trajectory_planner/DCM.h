@@ -31,6 +31,7 @@ class DCMPlanner: private MinJerk{
         Vector3d* getXiTrajectory();
         Vector3d* getXiDot();
         Vector3d* getCoM(Vector3d COM_0);
+        Vector3d* getZMP();
     private:
         // Design Parameters
         double deltaZ_;

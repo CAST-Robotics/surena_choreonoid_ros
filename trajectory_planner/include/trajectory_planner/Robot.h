@@ -43,6 +43,7 @@ class Robot{
         Matrix3d RPitch(double theta);
 
         Vector3d* com_;
+        Vector3d* zmp_;
         Vector3d* rAnkle_;
         Vector3d* lAnkle_;
 

@@ -34,7 +34,7 @@ Vector3d* Ankle::getTrajectoryR(){
 
 void Ankle::generateTrajectory(){
 
-    int lenght = int((stepCount_ * tStep_ + 1) / dt_);  // +1 second is for decreasing robot's height from COM_0 to deltaZ
+    int lenght = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;  // +1 second is for decreasing robot's height from COM_0 to deltaZ
     lFoot_ = new Vector3d[lenght];
     rFoot_ = new Vector3d[lenght];
 
@@ -46,9 +46,9 @@ void Ankle::generateTrajectory(){
 
 void Ankle::updateTrajectory(bool left_first){
     int index = 0;
-    
+    int length = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;
     // decreasing robot's height
-    for (int i = 0; i < 1/dt_; i++){
+    for (int i = 0; i < (tStep_ + 1)/dt_; i++){
         double time = dt_ * i;
         if(footPose_[0](1) > footPose_[1](1)){
             lFoot_[index] = footPose_[0];
@@ -141,6 +141,18 @@ void Ankle::updateTrajectory(bool left_first){
             }
         }
     }
+
+    Vector3d temp_left = lFoot_[index - 1];
+    Vector3d temp_right = rFoot_[index - 1];
+    for (int i = 0; i < (tStep_)/dt_; i++){
+        double time = dt_ * i;
+        lFoot_[index] = temp_left;
+        rFoot_[index] = temp_right;
+        index ++;
+    }
+    cout << index << endl;
+    MinJerk::write2File(lFoot_, length, "lFoot");
+    MinJerk::write2File(rFoot_, length, "rFoot");
 }
 
 Ankle::~Ankle(){

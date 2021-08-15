@@ -99,7 +99,8 @@ public:
                 joint->u() = u;
             }
         }
-        if (idx<6000){
+        
+        if (idx<7000){
             idx ++;
         }
         return true;
