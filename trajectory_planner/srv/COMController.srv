@@ -1,7 +1,0 @@
-Vector3d x_ref
-Vector3d x_dot_ref
-Vector3d r_zmp_real
-Vector3d x_real
-Vector3d r_zmp_ref
----
-Vector3d x_dot_star 

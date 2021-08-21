@@ -20,9 +20,9 @@ PID::PID(double timeStep){
     this->prevoiusError_ = 0.0;
     this->dt_ = timeStep;
     xi_error_<<0.0, 0.0, 0.0;
-    ros::init(argc, argv, "controller");
-    ros::ServiceServer dcm_service = nh.advertise("dcmcontroller", dcmController);
-    ros::ServiceServer com_service = nh.advertise("comcontroller", comController);
+    //ros::init(argc, argv, "controller");
+    //ros::ServiceServer dcm_service = nh.advertise("dcmcontroller", dcmController);
+    //ros::ServiceServer com_service = nh.advertise("comcontroller", comController);
 }
 
 //double PID::getOutput(double desiredValue, double currentValue){
@@ -36,7 +36,7 @@ PID::PID(double timeStep){
 //
 //    return kp_ * error + ki_ * this->intI_ + kd_ * deriv;
 //}
-
+/*
 bool PID::dcmController(trajectory_planner::DCMController::Request &req,
                         trajectory_planner::DCMController::Response &res){
                             Matrix3d Kp = kp_*kp_;
@@ -55,3 +55,4 @@ bool PID::comController(trajectory_planner::COMController::Request &req,
                             res.x_dot_star = req.x_dot_ref - kzmp_*(req.r_zmp_ref - req.r_zmp_real) + kcom_*(req.x_ref - req.x_real);
                             return true;
                         }
+*/
