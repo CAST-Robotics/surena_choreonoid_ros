@@ -60,8 +60,6 @@ add_service_files(
   FILES
   JntAngs.srv
   Trajectory.srv
-  COMController.srv
-  DCMController.srv
 )
 
 ## Generate actions in the 'action' folder

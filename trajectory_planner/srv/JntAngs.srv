@@ -1,3 +1,5 @@
 int32 iter
+float32[3] left_ft
+float32[3] right_ft
 ---
 float32[12] jnt_angs

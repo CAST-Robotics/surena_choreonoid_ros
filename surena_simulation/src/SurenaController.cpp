@@ -1,4 +1,5 @@
 #include <cnoid/SimpleController>
+#include <cnoid/ForceSensor>
 #include <eigen3/Eigen/Eigen>
 #include <ros/ros.h>
 #include "trajectory_planner/Trajectory.h"
@@ -31,6 +32,8 @@ class SurenaController : public SimpleController{
     double qref[29];
     double qold[29];
     BodyPtr ioBody;
+    ForceSensor* leftForceSensor;
+    ForceSensor* rightForceSensor;
 
 public:
     virtual bool configure(SimpleControllerConfig* config) override
@@ -45,17 +48,22 @@ public:
     {
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-        traj.request.alpha = 0.3;
-        traj.request.t_double_support = 0.1;
-        traj.request.t_step = 0.8;
-        traj.request.step_length = 0.5;
+        traj.request.alpha = 0.5;
+        traj.request.t_double_support = 0.2;
+        traj.request.t_step = 1.4;
+        traj.request.step_length = 0.25;
         traj.request.COM_height = 0.6;
         traj.request.step_count = 6;
-        traj.request.ankle_height = 0.1;
+        traj.request.ankle_height = 0.05;
+        dt = io->timeStep();
+        traj.request.dt = dt;
         client.call(traj);
         result = traj.response.result;
         ioBody = io->body();
-        dt = io->timeStep();
+        leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
+        rightForceSensor = ioBody->findDevice<ForceSensor>("RightAnkleForceSensor");
+        io->enableInput(leftForceSensor);
+        io->enableInput(rightForceSensor);
 
 
         for(int i=0; i < ioBody->numJoints(); ++i){
@@ -74,14 +82,20 @@ public:
     }
     virtual bool control() override
     {
-        ros::ServiceClient client2=nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
+        ros::ServiceClient jnt_client = nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
 
+        jntangs.request.left_ft = {leftForceSensor->f().z(),
+                                   leftForceSensor->tau().x(),
+                                   leftForceSensor->tau().y()};
+        jntangs.request.right_ft = {rightForceSensor->f().z(),
+                                   rightForceSensor->tau().x(),
+                                   rightForceSensor->tau().y()};
         jntangs.request.iter = idx;
         float jnts[12];
         if (result){
 
-            client2.call(jntangs);
+            jnt_client.call(jntangs);
             //jnts = jntangs.response.jnt_angs;
             for(int i = 0; i<12; i++){
                 jnts[i] = jntangs.response.jnt_angs[i];
@@ -100,11 +114,10 @@ public:
             }
         }
         
-        if (idx<7000){
+        if (idx < 11.4 / dt - 1){
             idx ++;
         }
         return true;
     }
 };
 CNOID_IMPLEMENT_SIMPLE_CONTROLLER_FACTORY(SurenaController)
-

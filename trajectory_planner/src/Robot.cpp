@@ -9,7 +9,7 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.36;
+    shank_ = 0.3;
     thigh_ = 0.3535;
     torso_ = 0.09;
     isTrajAvailable_ = false;
@@ -31,7 +31,7 @@ void Robot::spinOffline(int iter, double* config){
     MatrixXd pelvis(3,1);
     lfoot << lAnkle_[iter](0), lAnkle_[iter](1), lAnkle_[iter](2);
     rfoot << rAnkle_[iter](0), rAnkle_[iter](1), rAnkle_[iter](2);
-    pelvis << com_[iter](0), com_[iter](1), com_[iter](2);
+    pelvis << comd_[iter](0), comd_[iter](1), comd_[iter](2);
     doIK(pelvis,attitude,lfoot,attitude,rfoot,attitude);
 
     for(int i = 0; i < 12; i++)
@@ -132,7 +132,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double COM_height = req.COM_height;
     double step_len = req.step_length;
     int num_step = req.step_count;
-    double dt = 0.001;
+    double dt = req.dt;
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
@@ -149,13 +149,13 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     dcm_rf[0] << 0.0, 0.0, 0.0;
     dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
     ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
-    ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](0), 0.0;
+    ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
 
     trajectoryPlanner->setFoot(dcm_rf);
     trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
-    com_ = trajectoryPlanner->getCoM(com);
-    zmp_ = trajectoryPlanner->getZMP();
+    comd_ = trajectoryPlanner->getCoM(com);
+    zmpd_ = trajectoryPlanner->getZMP();
     delete[] dcm_rf;
 
     anklePlanner->updateFoot(ankle_rf);
@@ -188,7 +188,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         return false;
     }
     ROS_INFO("joint angles returned");
-    cout<<req.iter<<endl;
+    cout << req.iter << endl;
+    cout << req.left_ft[0] << "\t" << req.right_ft[0] << endl;
     return true;
 }
 

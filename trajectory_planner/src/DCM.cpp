@@ -102,7 +102,7 @@ void DCMPlanner::updateXiDSPositions(){
             xi_dot_i = (xiDSI_[step] - rVRP_[step - 1]) * sqrt(K_G/deltaZ_);
             xi_dot_e = (xiDSE_[step] - rVRP_[step]) * sqrt(K_G/deltaZ_);
             Vector3d* coefs = this->minJerkInterpolate(xiDSI_[step],xiDSE_[step],xi_dot_i, xi_dot_e, tDS_);
-            for (int i = (tStep_ * step)/dt_ - (tDS_ * alpha_ / dt_ ); i < ((tStep_ * step)/dt_) + (tDS_/dt_) * (1-alpha_); ++i){
+            for (int i = (tStep_ * step)/dt_ - (tDS_ * alpha_ / dt_ ) + 1; i < ((tStep_ * step)/dt_) + (tDS_/dt_) * (1-alpha_); ++i){
                 double time = fmod(i * dt_, tStep_ * step - tDS_ * alpha_);
                 xi_[i] = coefs[0] + coefs[1] * time + coefs[2] * pow(time,2) + coefs[3] * pow(time,3);
                 xiDot_[i] = coefs[1] + 2 * coefs[2] * time + 3 * coefs[3] * pow(time,2);
