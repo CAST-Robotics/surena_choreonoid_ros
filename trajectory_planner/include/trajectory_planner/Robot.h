@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <ros/console.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
 
@@ -8,6 +9,7 @@
 #include "Link.h"
 #include "PID.h"
 #include "Ankle.h"
+#include "MinJerk.h"
 
 #include "fstream"
 
@@ -18,7 +20,7 @@ class Robot{
     public:
         Robot(ros::NodeHandle *nh);
 
-        // vector<double> spinOnline(VectorXd forceSensor, Vector3d gyro, Vector3d accelerometer, double time);
+        void spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
         void spinOffline(int iter, double* config);
         bool jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
                             trajectory_planner::JntAngs::Response &res);
@@ -48,7 +50,25 @@ class Robot{
         Vector3d* rAnkle_;
         Vector3d* lAnkle_;
 
+        Vector3d rSole_;    // current position of right sole
+        Vector3d lSole_;    // current position of left sole
+        Vector3d* FKCoM_;      // current CoM of robot
+        Vector3d* realZMP_;      // current ZMP of robot
+        bool leftSwings_;
+        bool rightSwings_;
+        
+        vector<_Link> links_;
+
+        Vector3d CoMEstimatorFK(double config[]);
+        void updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
+        void updateSolePosition();
+        Vector3d getZMPLocal(Vector3d torque, double fz);
+        Vector3d ZMPGlobal(Vector3d zmp_r, Vector3d zmp_l, double f_r, double f_l);
+
         ros::ServiceServer jntAngsServer_;
         ros::ServiceServer trajGenServer_;
         bool isTrajAvailable_;
+
+        int index_;
+        int size_;
 };

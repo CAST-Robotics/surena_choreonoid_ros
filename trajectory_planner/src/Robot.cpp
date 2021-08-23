@@ -1,5 +1,17 @@
 #include "Robot.h" 
 
+void write2File(Vector3d* input, int size, string file_name="data"){
+    ofstream output_file(file_name + ".csv");
+    for(int i=0; i<size; i++){
+         output_file << input[i](0) << " ,";
+         output_file << input[i](1) << " ,";
+         output_file << input[i](2) << " ,";
+         output_file << "\n";
+    }
+    output_file.close();
+}
+
+
 Robot::Robot(ros::NodeHandle *nh){
 
     trajGenServer_ = nh->advertiseService("/traj_gen", 
@@ -12,16 +24,145 @@ Robot::Robot(ros::NodeHandle *nh){
     shank_ = 0.3;
     thigh_ = 0.3535;
     torso_ = 0.09;
+
+    rSole_ << 0.0, -torso_/2, 0.0;
+    lSole_ << 0.0, torso_/2, 0.0;       // might be better if these two are input argument of constructor
     isTrajAvailable_ = false;
 
+    Vector3d a[12];
+	Vector3d b[12];
+	// Defining Joint Axis
+	a[0] << 0.0, 0.0, 1.0;
+	a[1] << 1.0, 0.0, 0.0;
+	a[2] << 0.0, 1.0, 0.0;
+	a[3] << 0.0, 1.0, 0.0;
+	a[4] << 0.0, 1.0, 0.0;
+	a[5] << 1.0, 0.0, 0.0;
+	a[6] = a[0];
+	a[7] = a[1];
+	a[8] = a[2];
+	a[9] = a[3];
+	a[10] = a[4];
+	a[11] = a[5];
+	// Defining Joint Positions
+	b[0] << 0.0, -0.115, 0.0;
+	b[1] << 0.0, 0.0, 0.0;
+	b[2] = b[1];
+	b[3] << 0.0, 0.0, -0.36;
+	b[4] << 0.0, 0.0, -0.37;
+	b[5] = b[1];
+	b[6] = -b[0];
+	b[7] = b[1];
+	b[8] = b[2];
+	b[9] = b[3];
+	b[10] = b[4];
+	b[11] = b[5];
+
+    _Link pelvis(0, Vector3d::Ones(3), Vector3d::Ones(3), 3.0, Matrix3d::Identity(3,3));
+    Vector3d position(0.0, 0.0, 0.0);
+	pelvis.initPose(position, Matrix3d::Identity(3, 3));
+    links_.push_back(pelvis);
+    _Link rHipY(1, a[0], b[0], 3.0, Matrix3d::Identity(3, 3), &pelvis);
+    links_.push_back(rHipY);
+    _Link rHipR(2, a[1], b[1], 3.0, Matrix3d::Identity(3, 3), &rHipY);
+    links_.push_back(rHipR);
+    _Link rHipP(3, a[2], b[2], 3.0, Matrix3d::Identity(3, 3), &rHipR);
+    links_.push_back(rHipP);
+    _Link rKnee(4, a[3], b[3], 3.0, Matrix3d::Identity(3, 3), &rHipP);
+    links_.push_back(rKnee);
+    _Link rAnkleP(5, a[4], b[4], 3.0, Matrix3d::Identity(3, 3), &rKnee);
+    links_.push_back(rAnkleP); 
+    _Link rAnkleR(6, a[5], b[5], 3.0, Matrix3d::Identity(3, 3), &rAnkleP);
+    links_.push_back(rAnkleR); 
+
+    _Link lHipY(7, a[6], b[6], 3.0, Matrix3d::Identity(3, 3), &pelvis);
+    links_.push_back(lHipY);
+    _Link lHipR(8, a[7], b[7], 3.0, Matrix3d::Identity(3, 3), &lHipY);
+    links_.push_back(lHipR);
+    _Link lHipP(9, a[8], b[8], 3.0, Matrix3d::Identity(3, 3), &lHipR);
+    links_.push_back(lHipP);
+    _Link lKnee(10, a[9], b[9], 3.0, Matrix3d::Identity(3, 3), &lHipP);
+    links_.push_back(lKnee);
+    _Link lAnkleP(11, a[10], b[10], 3.0, Matrix3d::Identity(3, 3), &lKnee);
+    links_.push_back(lAnkleP); 
+    _Link lAnkleR(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), &lAnkleP);
+    links_.push_back(lAnkleR);
     cout << "Robot Object has been Created" << endl;
 }
 
-// vector<double> Robot::spinOnline(VectorXd forceSensor, Vector3d gyro, Vector3d accelerometer, double time){
-    // TODO
-    // Add CoM Estimation
-    // Add DCM + CoM controllers
-// }
+void Robot::spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
+    // update joint positions
+    for (int i = 0; i <= 29; i ++){
+        links_[i].update(config[i], 0.0, 0.0);
+    }
+    
+    // Do the Forward Kinematics for Lower Limb
+    links_[12].FK();
+    links_[6].FK();    // update all raw values of sensors and link states
+    updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);    
+}
+
+void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
+    
+    // Update swing/stance foot
+    if (abs(f_r) < 0.1){
+        rightSwings_ = true;
+        leftSwings_ = false;
+    }
+    else if (abs(f_l) < 0.1){
+        rightSwings_ = false;
+        leftSwings_ = true;
+    }
+    else{
+        rightSwings_ = false;
+        leftSwings_ = false;
+    }
+    // Update CoM and Sole Positions
+    updateSolePosition();
+
+    // Calculate ZMP with FT data
+    if (rightSwings_ && (!leftSwings_))
+        realZMP_[index_] = lSole_ + getZMPLocal(torque_l, f_l);
+    else if((!rightSwings_) && leftSwings_)
+        realZMP_[index_] = rSole_ + getZMPLocal(torque_r, f_r);
+    else
+        realZMP_[index_] = ZMPGlobal(rSole_ + getZMPLocal(torque_r, f_r), lSole_ + getZMPLocal(torque_l, f_l), f_r, f_l);
+
+}
+
+void Robot::updateSolePosition(){
+
+    if(leftSwings_ && (!rightSwings_)){
+        lSole_ = rSole_ - links_[6].getPose() + links_[12].getPose();
+        FKCoM_[index_] = lSole_ - links_[12].getPose();
+    }
+    else if ((!leftSwings_) && rightSwings_){
+        rSole_ = lSole_ - links_[12].getPose() + links_[6].getPose();
+        FKCoM_[index_] = rSole_ - links_[6].getPose();
+    }
+    else{   // double support
+        FKCoM_[index_] = rSole_ - links_[6].getPose();
+    }
+}
+
+Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
+    // Calculate ZMP for each foot
+    Vector3d zmp;
+    zmp(2) = 0.0;
+    zmp(0) = -torque(1)/fz;
+    zmp(1) = torque(0)/fz;
+    return zmp;
+}
+
+Vector3d Robot::ZMPGlobal(Vector3d zmp_r, Vector3d zmp_l, double f_r, double f_l){
+    // Calculate ZMP during Double Support Phase
+    if (f_r + f_l == 0){
+        ROS_WARN("No Foot Contact, Check the Robot!");
+    }
+    assert(!(f_r + f_l == 0));
+
+    return (zmp_r * f_r + zmp_l * f_l) / (f_r + f_l);
+}
 
 void Robot::spinOffline(int iter, double* config){
     
@@ -126,6 +267,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         ROS service for generating robot COM & ankles trajectories
     */
     ROS_INFO("Generating Trajectory started.");
+    size_ = int(((req.step_count + 2) * req.t_step + 1) / req.dt);
     double alpha = req.alpha;
     double t_ds = req.t_double_support;
     double t_s = req.t_step;
@@ -166,6 +308,10 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     ROS_INFO("trajectory generated");
     res.result = true;
     isTrajAvailable_ = true;
+
+    FKCoM_ = new Vector3d[size_];
+    realZMP_ = new Vector3d[size_];
+
     return true;
 }
 
@@ -178,7 +324,14 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
     */
     if (isTrajAvailable_)
     {
+        index_ = req.iter;
         double jnt_angs[12];
+        Vector3d right_torque(req.right_ft[1], req.right_ft[2], 0.0);
+        Vector3d left_torque(req.left_ft[1], req.left_ft[2], 0.0);
+        double config[] = {req.config[2], req.config[0], req.config[1], req.config[3], req.config[4], req.config[5],
+                        req.config[8], req.config[6], req.config[7], req.config[9], req.config[10], req.config[11]};
+        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[2], req.left_ft[2],
+                Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),Vector3d (req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
         this->spinOffline(req.iter, jnt_angs);
         for(int i = 0; i < 12; i++)
             res.jnt_angs[i] = jnt_angs[i];
@@ -187,9 +340,14 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         ROS_INFO("First call traj_gen service");
         return false;
     }
+
+    if (req.iter == size_ - 1 ){ 
+        write2File(FKCoM_, size_,"CoM Real");
+        write2File(realZMP_, size_, "ZMP Real");
+    }
     ROS_INFO("joint angles returned");
     cout << req.iter << endl;
-    cout << req.left_ft[0] << "\t" << req.right_ft[0] << endl;
+    //cout << req.left_ft[0] << "\t" << req.right_ft[0] << endl;
     return true;
 }
 
