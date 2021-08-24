@@ -19,6 +19,7 @@ class Robot{
     friend class Surena;
     public:
         Robot(ros::NodeHandle *nh);
+        ~Robot();
 
         void spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
         void spinOffline(int iter, double* config);
@@ -54,10 +55,26 @@ class Robot{
         Vector3d lSole_;    // current position of left sole
         Vector3d* FKCoM_;      // current CoM of robot
         Vector3d* realZMP_;      // current ZMP of robot
+        Vector3d* rSoles_;
+        Vector3d* lSoles_;
         bool leftSwings_;
         bool rightSwings_;
         
-        vector<_Link> links_;
+        _Link pelvis;
+        _Link rHipY;
+        _Link rHipR;
+        _Link rHipP;
+        _Link rKnee;
+        _Link rAnkleP;
+        _Link rAnkleR;
+        _Link lHipY;
+        _Link lHipR;
+        _Link lHipP;
+        _Link lKnee;
+        _Link lAnkleP;
+        _Link lAnkleR;
+
+        _Link links_[13];
 
         Vector3d CoMEstimatorFK(double config[]);
         void updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);

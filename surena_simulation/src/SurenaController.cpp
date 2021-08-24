@@ -55,7 +55,7 @@ public:
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
         traj.request.alpha = 0.5;
-        traj.request.t_double_support = 0.2;
+        traj.request.t_double_support = 0.3;
         traj.request.t_step = 1.4;
         traj.request.step_length = 0.25;
         traj.request.COM_height = 0.6;

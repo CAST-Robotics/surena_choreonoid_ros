@@ -45,6 +45,28 @@ void _Link::initPose(Vector3d p, Matrix3d r){
 	this->R_ = r;
 }
 
+void _Link::copy(_Link source){
+    this->ID_ = source.ID_;
+    this->parent_ = source.parent_;
+    this->a_ = source.a_;
+    this->b_ = source.b_;
+    this->m_ = source.m_;
+    this->I_ = source.I_;
+}
+
+void _Link::setParams(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent){
+    this->ID_ = ID;
+    this->parent_ = parent;
+    this->a_ = a;
+    this->b_ = b;
+    this->m_ = m;
+    this->I_ = inertia;
+
+    this->q_ = 0.0;
+    this->dq_ = 0.0;
+    this->ddq_ = 0.0;
+}
+
 Matrix3d _Link::rodrigues(Vector3d w, double dt){
     // Helper Function for calculating attitude in Forward Kinematics
 
@@ -64,7 +86,7 @@ Matrix3d _Link::rodrigues(Vector3d w, double dt){
 }
 
 MatrixXd _Link::FK(){
-    if(this->ID_ == 0){
+    if(this->parent_ == NULL){
         return this->transformation();
     }
     else{
@@ -147,7 +169,7 @@ int main(){
 
 
 	_Link pelvis(0, Vector3d::Ones(3), Vector3d::Ones(3), 3.0, Matrix3d::Identity(3,3));
-	Vector3d position(0.0, 0.0, 0.74);
+	Vector3d position(0.0, 0.0, 0.73);
 	pelvis.initPose(position, Matrix3d::Identity(3, 3));
 
 	_Link rHipY(1, a[0], b[0], 3.0, Matrix3d::Identity(3, 3), &pelvis);

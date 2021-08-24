@@ -4,6 +4,11 @@
         "/opt/ros/noetic/lib/python3/dist-packages"
     ],
     "files.associations": {
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "*.tcc": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp"
     }
 }
