@@ -59,22 +59,8 @@ class Robot{
         Vector3d* lSoles_;
         bool leftSwings_;
         bool rightSwings_;
-        
-        _Link pelvis;
-        _Link rHipY;
-        _Link rHipR;
-        _Link rHipP;
-        _Link rKnee;
-        _Link rAnkleP;
-        _Link rAnkleR;
-        _Link lHipY;
-        _Link lHipR;
-        _Link lHipP;
-        _Link lKnee;
-        _Link lAnkleP;
-        _Link lAnkleR;
 
-        _Link links_[13];
+        _Link* links_[13];
 
         Vector3d CoMEstimatorFK(double config[]);
         void updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);

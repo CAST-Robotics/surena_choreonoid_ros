@@ -19,6 +19,7 @@ class _Link{
     public:
         _Link(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent=NULL);
         _Link(){}
+        _Link(const _Link& source);
         ~_Link();
 
         double q();
@@ -32,7 +33,6 @@ class _Link{
         MatrixXd FK();
         MatrixXd updateJacobian();
         void setParams(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent=NULL);
-        void copy(_Link source);
         
     private:
         ////////////////// Link Properties ///////////////////////
