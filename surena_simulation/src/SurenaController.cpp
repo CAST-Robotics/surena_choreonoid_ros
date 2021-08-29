@@ -104,8 +104,16 @@ public:
         jntangs.request.iter = idx;
         //float config[12];
         for (int j=0; j<6; j++){
-                jntangs.request.config[j] = qold[j];
-                jntangs.request.config[6+j] = qold[j+13];
+                if (j == 0) {
+                    jntangs.request.config[j] = qold[j + 2];
+                    jntangs.request.config[6+j] = qold[j + 13 + 2];
+                }else if (j == 1 || j == 2){
+                    jntangs.request.config[j] = qold[j - 1];
+                    jntangs.request.config[6+j] = qold[j + 13 - 1];
+                }else {
+                    jntangs.request.config[j] = qold[j];
+                    jntangs.request.config[6+j] = qold[j + 13];
+                }
             }
         //jntangs.request.config = config;
         jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
@@ -119,8 +127,17 @@ public:
                 jnts[i] = jntangs.response.jnt_angs[i];
             }
             for (int j=0; j<6; j++){
-                qref[j] = jnts[j];
-                qref[13+j] = jnts[j+6];
+                
+                if (j == 0 || j == 1) {
+                    qref[j] = jnts[j + 1];
+                    qref[13+j] = jnts[j + 6 + 1];
+                }else if (j == 2){
+                    qref[j] = jnts[j - 2];
+                    qref[13+j] = jnts[j + 6 - 2];
+                }else {
+                    qref[j] = jnts[j];
+                    qref[13+j] = jnts[j+6];
+                }
             }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);

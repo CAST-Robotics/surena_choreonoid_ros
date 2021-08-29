@@ -21,9 +21,9 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.3;
-    thigh_ = 0.3535;
-    torso_ = 0.09;
+    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36
+    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37
+    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115
 
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -264,7 +264,7 @@ double* Robot::geometricIK(MatrixXd p1, MatrixXd r1, MatrixXd p7, MatrixXd r7, b
     q[0] = atan2(-R(0,1),R(1,1));         // Hip Yaw
     q[1] = atan2(R(2,1), -R(0,1) * sin(q[0]) + R(1,1) * cos(q[0]));           // Hip Roll
     q[2] = atan2(-R(2,0), R(2,2));        // Hip Pitch
-    //return q;
+    return q;
     double* choreonoid_only = new double[6] {q[1], q[2], q[0], q[3], q[4], q[5]};
     return choreonoid_only;
 }
@@ -339,8 +339,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         double jnt_angs[12];
         Vector3d right_torque(req.right_ft[1], req.right_ft[2], 0.0);
         Vector3d left_torque(req.left_ft[1], req.left_ft[2], 0.0);
-        double config[] = {0, req.config[2], req.config[0], req.config[1], req.config[3], req.config[4], req.config[5],
-                           req.config[8], req.config[6], req.config[7], req.config[9], req.config[10], req.config[11]};
+        double config[] = {0, req.config[0], req.config[1], req.config[2], req.config[3], req.config[4], req.config[5],
+                           req.config[6], req.config[7], req.config[8], req.config[9], req.config[10], req.config[11]};
         this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[2], req.left_ft[2],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
