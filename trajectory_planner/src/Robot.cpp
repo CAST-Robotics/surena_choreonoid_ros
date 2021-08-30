@@ -21,9 +21,9 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.3;
-    thigh_ = 0.3535;
-    torso_ = 0.09;
+    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36
+    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37
+    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115
 
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -57,87 +57,59 @@ Robot::Robot(ros::NodeHandle *nh){
 	b[9] = b[3];
 	b[10] = b[4];
 	b[11] = b[5];
-/*
-    _Link pelvis(0, Vector3d::Ones(3), Vector3d::Ones(3), 3.0, Matrix3d::Identity(3,3));
-    Vector3d position(0.0, 0.0, 0.0);
-	pelvis.initPose(position, Matrix3d::Identity(3, 3));
-    links_.push_back(pelvis);
-    _Link rHipY(1, a[0], b[0], 3.0, Matrix3d::Identity(3, 3), &links_[0]);
-    links_.push_back(rHipY);
-    _Link rHipR(2, a[1], b[1], 3.0, Matrix3d::Identity(3, 3), &links_[1]);
-    links_.push_back(rHipR);
-    _Link rHipP(3, a[2], b[2], 3.0, Matrix3d::Identity(3, 3), &links_[2]);
-    links_.push_back(rHipP);
-    _Link rKnee(4, a[3], b[3], 3.0, Matrix3d::Identity(3, 3), &links_[3]);
-    links_.push_back(rKnee);
-    _Link rAnkleP(5, a[4], b[4], 3.0, Matrix3d::Identity(3, 3), &links_[4]);
-    links_.push_back(rAnkleP); 
-    _Link rAnkleR(6, a[5], b[5], 3.0, Matrix3d::Identity(3, 3), &links_[5]);
-    links_.push_back(rAnkleR); 
 
-    _Link lHipY(7, a[6], b[6], 3.0, Matrix3d::Identity(3, 3), &links_[0]);
-    links_.push_back(lHipY);
-    _Link lHipR(8, a[7], b[7], 3.0, Matrix3d::Identity(3, 3), &links_[7]);
-    links_.push_back(lHipR);
-    _Link lHipP(9, a[8], b[8], 3.0, Matrix3d::Identity(3, 3), &links_[8]);
-    links_.push_back(lHipP);
-    _Link lKnee(10, a[9], b[9], 3.0, Matrix3d::Identity(3, 3), &links_[9]);
-    links_.push_back(lKnee);
-    _Link lAnkleP(11, a[10], b[10], 3.0, Matrix3d::Identity(3, 3), &links_[10]);
-    links_.push_back(lAnkleP); 
-    _Link lAnkleR(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), &links_[11]);
-    links_.push_back(lAnkleR);
-    */
-    pelvis.setParams(0, Vector3d::Ones(3), Vector3d::Ones(3), 3.0, Matrix3d::Identity(3,3));
-	Vector3d position(0.0, 0.0, 0.0);
-	pelvis.initPose(position, Matrix3d::Identity(3, 3));
+    _Link* pelvis = new _Link(0, Vector3d::Ones(3), Vector3d::Ones(3), 3.0, Matrix3d::Identity(3,3));
+    Vector3d position(0.0, 0.0, 0.0);
+	pelvis->initPose(position, Matrix3d::Identity(3, 3));
     links_[0] = pelvis;
-	rHipY.setParams(1, a[0], b[0], 3.0, Matrix3d::Identity(3, 3), &(links_[0]));
+    _Link* rHipY = new _Link(1, a[0], b[0], 3.0, Matrix3d::Identity(3, 3), links_[0]);
     links_[1] = rHipY;
-	rHipR.setParams(2, a[1], b[1], 3.0, Matrix3d::Identity(3, 3), &(links_[1]));
+    _Link* rHipR = new _Link(2, a[1], b[1], 3.0, Matrix3d::Identity(3, 3), links_[1]);
     links_[2] = rHipR;
-	rHipP.setParams(3, a[2], b[2], 3.0, Matrix3d::Identity(3, 3), &(links_[2]));
+    _Link* rHipP = new _Link(3, a[2], b[2], 3.0, Matrix3d::Identity(3, 3), links_[2]);
     links_[3] = rHipP;
-	rKnee.setParams(4, a[3], b[3], 3.0, Matrix3d::Identity(3, 3), &(links_[3]));
+    _Link* rKnee = new _Link(4, a[3], b[3], 3.0, Matrix3d::Identity(3, 3), links_[3]);
     links_[4] = rKnee;
-	rAnkleP.setParams(5, a[4], b[4], 3.0, Matrix3d::Identity(3, 3), &(links_[4]));
-    links_[5] = rAnkleP;
-	rAnkleR.setParams(6, a[5], b[5], 3.0, Matrix3d::Identity(3, 3), &(links_[5]));
-    links_[6] = rAnkleR;
-	lHipY.setParams(7, a[6], b[6], 3.0, Matrix3d::Identity(3, 3), &(links_[0]));
+    _Link* rAnkleP = new _Link(5, a[4], b[4], 3.0, Matrix3d::Identity(3, 3), links_[4]);
+    links_[5] = rAnkleP; 
+    _Link* rAnkleR = new _Link(6, a[5], b[5], 3.0, Matrix3d::Identity(3, 3), links_[5]);
+    links_[6] = rAnkleR; 
+
+    _Link* lHipY = new _Link(7, a[6], b[6], 3.0, Matrix3d::Identity(3, 3), links_[0]);
     links_[7] = lHipY;
-	lHipR.setParams(8, a[7], b[7], 3.0, Matrix3d::Identity(3, 3), &(links_[7]));
+    _Link* lHipR = new _Link(8, a[7], b[7], 3.0, Matrix3d::Identity(3, 3), links_[7]);
     links_[8] = lHipR;
-	lHipP.setParams(9, a[8], b[8], 3.0, Matrix3d::Identity(3, 3), &(links_[8]));
+    _Link* lHipP = new _Link(9, a[8], b[8], 3.0, Matrix3d::Identity(3, 3), links_[8]);
     links_[9] = lHipP;
-	lKnee.setParams(10, a[9], b[9], 3.0, Matrix3d::Identity(3, 3), &(links_[9]));
+    _Link* lKnee = new _Link(10, a[9], b[9], 3.0, Matrix3d::Identity(3, 3), links_[9]);
     links_[10] = lKnee;
-	lAnkleP.setParams(11, a[10], b[10], 3.0, Matrix3d::Identity(3, 3), &(links_[10]));
-    links_[11] = lAnkleP;
-	lAnkleR.setParams(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), &(links_[11]));
+    _Link* lAnkleP = new _Link(11, a[10], b[10], 3.0, Matrix3d::Identity(3, 3), links_[10]);
+    links_[11] = lAnkleP; 
+    _Link* lAnkleR = new _Link(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), links_[11]);
     links_[12] = lAnkleR;
+
     cout << "Robot Object has been Created" << endl;
 }
 
 void Robot::spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
     // update joint positions
     for (int i = 0; i < 13; i ++){
-        links_[i].update(config[i], 0.0, 0.0);
+        links_[i]->update(config[i], 0.0, 0.0);
     }
     // Do the Forward Kinematics for Lower Limb
-    links_[12].FK();
-    links_[6].FK();    // update all raw values of sensors and link states
+    links_[12]->FK();
+    links_[6]->FK();    // update all raw values of sensors and link states
     updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);    
 }
 
 void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
     
     // Update swing/stance foot
-    if (abs(f_r) < 30){
+    if (links_[12]->getPose()(2) < links_[6]->getPose()(2)){
         rightSwings_ = true;
         leftSwings_ = false;
     }
-    else if (abs(f_l) < 30){
+    else if (links_[6]->getPose()(2) < links_[12]->getPose()(2)){
         rightSwings_ = false;
         leftSwings_ = true;
     }
@@ -149,31 +121,34 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
     updateSolePosition();
 
     // Calculate ZMP with FT data
-    if (rightSwings_ && (!leftSwings_))
-        realZMP_[index_] = lSole_ + getZMPLocal(torque_l, f_l);
-    else if((!rightSwings_) && leftSwings_)
-        realZMP_[index_] = rSole_ + getZMPLocal(torque_r, f_r);
-    else
-        realZMP_[index_] = ZMPGlobal(rSole_ + getZMPLocal(torque_r, f_r), lSole_ + getZMPLocal(torque_l, f_l), f_r, f_l);
+    Vector3d l_zmp = getZMPLocal(torque_l, f_l);
+    Vector3d r_zmp = getZMPLocal(torque_r, f_r);
+
+    if (abs(f_l) < 5)
+        f_l = 0;
+    if (abs(f_r) < 5)
+        f_r = 0;
+
+    realZMP_[index_] = ZMPGlobal(rSole_ + l_zmp, lSole_ + r_zmp, f_r, f_l);
 
 }
 
 void Robot::updateSolePosition(){
 
     if(leftSwings_ && (!rightSwings_)){
-        lSole_ = rSole_ - links_[6].getPose() + links_[12].getPose();
-        FKCoM_[index_] = lSole_ - links_[12].getPose();
+        lSole_ = rSole_ - links_[6]->getPose() + links_[12]->getPose();
+        FKCoM_[index_] = lSole_ - links_[12]->getPose();
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
     else if ((!leftSwings_) && rightSwings_){
-        rSole_ = lSole_ - links_[12].getPose() + links_[6].getPose();
-        FKCoM_[index_] = rSole_ - links_[6].getPose();
+        rSole_ = lSole_ - links_[12]->getPose() + links_[6]->getPose();
+        FKCoM_[index_] = rSole_ - links_[6]->getPose();
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
     else{   // double support
-        FKCoM_[index_] = rSole_ - links_[6].getPose();
+        FKCoM_[index_] = rSole_ - links_[6]->getPose();
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
@@ -187,7 +162,7 @@ Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
         return zmp;
     }
     zmp(0) = -torque(1)/fz;
-    zmp(1) = torque(0)/fz;
+    zmp(1) = -torque(0)/fz;
     return zmp;
 }
 
@@ -196,7 +171,7 @@ Vector3d Robot::ZMPGlobal(Vector3d zmp_r, Vector3d zmp_l, double f_r, double f_l
     if (f_r + f_l == 0){
         ROS_WARN("No Foot Contact, Check the Robot!");
     }
-    assert(!(f_r + f_l == 0));
+    //assert(!(f_r + f_l == 0));
 
     return (zmp_r * f_r + zmp_l * f_l) / (f_r + f_l);
 }
@@ -292,7 +267,7 @@ double* Robot::geometricIK(MatrixXd p1, MatrixXd r1, MatrixXd p7, MatrixXd r7, b
     q[0] = atan2(-R(0,1),R(1,1));         // Hip Yaw
     q[1] = atan2(R(2,1), -R(0,1) * sin(q[0]) + R(1,1) * cos(q[0]));           // Hip Roll
     q[2] = atan2(-R(2,0), R(2,2));        // Hip Pitch
-    //return q;
+    return q;
     double* choreonoid_only = new double[6] {q[1], q[2], q[0], q[3], q[4], q[5]};
     return choreonoid_only;
 }
@@ -367,15 +342,15 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         double jnt_angs[12];
         Vector3d right_torque(req.right_ft[1], req.right_ft[2], 0.0);
         Vector3d left_torque(req.left_ft[1], req.left_ft[2], 0.0);
-        double config[] = {0, req.config[2], req.config[0], req.config[1], req.config[3], req.config[4], req.config[5],
-                           req.config[8], req.config[6], req.config[7], req.config[9], req.config[10], req.config[11]};
-        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[2], req.left_ft[2],
+        double config[] = {0, req.config[0], req.config[1], req.config[2], req.config[3], req.config[4], req.config[5],
+                           req.config[6], req.config[7], req.config[8], req.config[9], req.config[10], req.config[11]};
+        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
         this->spinOffline(req.iter, jnt_angs);
         for(int i = 0; i < 12; i++)
             res.jnt_angs[i] = jnt_angs[i];
-        ROS_INFO("joint angles requested");
+        //ROS_INFO("joint angles requested");
     }else{
         ROS_INFO("First call traj_gen service");
         return false;
@@ -387,8 +362,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(rSoles_, size_, "Right Sole");
         write2File(lSoles_, size_, "Left Sole");
     }
-    ROS_INFO("joint angles returned");
-    cout << req.iter << endl;
+    //ROS_INFO("joint angles returned");
+    //cout << req.iter << endl;
     //cout << req.left_ft[0] << "\t" << req.right_ft[0] << endl;
     return true;
 }

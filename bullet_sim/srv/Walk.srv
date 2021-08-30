@@ -1,0 +1,8 @@
+float64 alpha
+float64 t_ds_ratio
+float64 t_step
+float64 COM_height
+float64 ankle_height
+int16 mode
+---
+bool result

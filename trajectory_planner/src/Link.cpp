@@ -14,6 +14,19 @@ _Link::_Link(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _
 
  }
 
+ _Link::_Link(const _Link& source){
+    ID_ = source.ID_;
+    parent_ = source.parent_;
+    a_ = source.a_;
+    b_ = source.b_;
+    m_ = source.m_;
+    I_ = source.I_;
+
+    q_ = 0.0;
+    dq_ = 0.0;
+    ddq_ = 0.0;
+}
+
  short int _Link::getID(){
     return this->ID_;
  }
@@ -43,15 +56,6 @@ _Link* _Link::getParent(){
 void _Link::initPose(Vector3d p, Matrix3d r){
 	this->p_ = p;
 	this->R_ = r;
-}
-
-void _Link::copy(_Link source){
-    this->ID_ = source.ID_;
-    this->parent_ = source.parent_;
-    this->a_ = source.a_;
-    this->b_ = source.b_;
-    this->m_ = source.m_;
-    this->I_ = source.I_;
 }
 
 void _Link::setParams(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent){
