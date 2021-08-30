@@ -121,12 +121,15 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
     updateSolePosition();
 
     // Calculate ZMP with FT data
-    if (rightSwings_ && (!leftSwings_))
-        realZMP_[index_] = lSole_ + getZMPLocal(torque_l, f_l);
-    else if((!rightSwings_) && leftSwings_)
-        realZMP_[index_] = rSole_ + getZMPLocal(torque_r, f_r);
-    else
-        realZMP_[index_] = ZMPGlobal(rSole_ + getZMPLocal(torque_r, f_r), lSole_ + getZMPLocal(torque_l, f_l), f_r, f_l);
+    Vector3d l_zmp = getZMPLocal(torque_l, f_l);
+    Vector3d r_zmp = getZMPLocal(torque_r, f_r);
+
+    if (abs(f_l) < 5)
+        f_l = 0;
+    if (abs(f_r) < 5)
+        f_r = 0;
+
+    realZMP_[index_] = ZMPGlobal(rSole_ + l_zmp, lSole_ + r_zmp, f_r, f_l);
 
 }
 
@@ -159,7 +162,7 @@ Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
         return zmp;
     }
     zmp(0) = -torque(1)/fz;
-    zmp(1) = torque(0)/fz;
+    zmp(1) = -torque(0)/fz;
     return zmp;
 }
 
@@ -341,13 +344,13 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         Vector3d left_torque(req.left_ft[1], req.left_ft[2], 0.0);
         double config[] = {0, req.config[0], req.config[1], req.config[2], req.config[3], req.config[4], req.config[5],
                            req.config[6], req.config[7], req.config[8], req.config[9], req.config[10], req.config[11]};
-        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[2], req.left_ft[2],
+        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
         this->spinOffline(req.iter, jnt_angs);
         for(int i = 0; i < 12; i++)
             res.jnt_angs[i] = jnt_angs[i];
-        ROS_INFO("joint angles requested");
+        //ROS_INFO("joint angles requested");
     }else{
         ROS_INFO("First call traj_gen service");
         return false;
@@ -359,8 +362,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(rSoles_, size_, "Right Sole");
         write2File(lSoles_, size_, "Left Sole");
     }
-    ROS_INFO("joint angles returned");
-    cout << req.iter << endl;
+    //ROS_INFO("joint angles returned");
+    //cout << req.iter << endl;
     //cout << req.left_ft[0] << "\t" << req.right_ft[0] << endl;
     return true;
 }
