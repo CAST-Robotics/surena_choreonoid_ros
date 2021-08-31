@@ -21,7 +21,7 @@ class Robot{
         Robot(ros::NodeHandle *nh);
         ~Robot();
 
-        void spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
+        void spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
         void spinOffline(int iter, double* config);
         bool jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
                             trajectory_planner::JntAngs::Response &res);
@@ -54,6 +54,8 @@ class Robot{
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole
         Vector3d* FKCoM_;      // current CoM of robot
+        Vector3d* FKCoMDot_;
+        Vector3d* realXi_;
         Vector3d* realZMP_;      // current ZMP of robot
         Vector3d* rSoles_;
         Vector3d* lSoles_;
@@ -74,4 +76,5 @@ class Robot{
 
         int index_;
         int size_;
+        double COM_height_;
 };

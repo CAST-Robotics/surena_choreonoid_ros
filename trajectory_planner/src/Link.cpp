@@ -35,6 +35,10 @@ double _Link::q(){
     return this->q_;
 }
 
+double _Link::dq(){
+    return this->dq_;
+}
+
 void _Link::update(double q, double dq, double ddq){
     this->q_ = q;
     this->dq_ = dq;
@@ -112,28 +116,40 @@ MatrixXd _Link::transformation(){
 }
 
 MatrixXd _Link::updateJacobian(){
-    vector<_Link> idx;
-    idx.push_back(*this);
-    _Link base = *this;
-    do{
-        base = *base.getParent();
+    vector<_Link*> idx;
+    _Link *base = this;
+    cout << this->getRot() << endl;
+    while(base->getID() != 0){
         idx.push_back(base);
-    }while(base.getID() != 0);
+        base = base->getParent();
+    }
     cout << "Route:\n";
     for (int i = 0; i < idx.size(); i++){
-        cout << idx[i].getID() << "-->";
+        cout << idx[i]->getID() << "-->";
     }
     cout << endl;
     MatrixXd jacobian =  MatrixXd::Zero(6,idx.size());
-    Vector3d target = base.getPose();
-    for(int n = idx.size() - 2; n >= 0; n--){
-        _Link mom = *(idx[n].getParent());
-        Vector3d a = mom.getRot() * idx[n].a_;
-        jacobian.block<3,1>(0,n) = a.cross(target - idx[n].getPose());
-        jacobian.block<3,1>(3,n) = a;
+    Vector3d target = this->getPose();
+    for(int n = idx.size() - 1; n >= 0; n--){
+        Vector3d a = idx[n]->getRot() * idx[n]->a_;
+        jacobian.block<3,1>(0,idx.size() - 1 - n) = a.cross(target - idx[n]->getPose());
+        jacobian.block<3,1>(3,idx.size() - 1 - n) = a;
     }
 
     return jacobian;
+}
+
+MatrixXd _Link::getVel(){
+    MatrixXd jacobian = this->updateJacobian();
+    int rows = jacobian.cols();
+    MatrixXd dq (rows, 1);
+    _Link *link = this; 
+    for(int i = rows - 1; i >= 0; i--)
+    {
+        dq(i, 0) = link->dq();
+        link = link->getParent();
+    }
+    return jacobian * dq;
 }
 
 _Link::~_Link(){
@@ -182,7 +198,9 @@ int main(){
 	_Link rKnee(4, a[3], b[3], 3.0, Matrix3d::Identity(3, 3), &rHipP);
 	_Link rAnkleP(5, a[4], b[4], 3.0, Matrix3d::Identity(3, 3), &rKnee);
 	_Link rAnkleR(6, a[5], b[5], 3.0, Matrix3d::Identity(3, 3), &rAnkleP);
-
+    rHipP.update(-M_PI/6, 0, 0);
+    rKnee.update(M_PI/3, 0, 0);
+    rAnkleP.update(-M_PI/6, 0, 0);
 	_Link lHipY(7, a[6], b[6], 3.0, Matrix3d::Identity(3, 3), &pelvis);
 	_Link lHipR(8, a[7], b[7], 3.0, Matrix3d::Identity(3, 3), &lHipY);
 	_Link lHipP(9, a[8], b[8], 3.0, Matrix3d::Identity(3, 3), &lHipR);
@@ -191,9 +209,9 @@ int main(){
 	_Link lAnkleR(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), &lAnkleP);
 
 
-	cout << lAnkleR.FK() << endl << "---------\n";
-	cout << lAnkleP.updateJacobian() << endl;
-	system("pause");
+	cout << rAnkleR.FK() << endl << "---------\n";
+	cout << rAnkleR.updateJacobian() << endl;
+    cout << rAnkleR.getVel() << endl;
 
     return 0;
 }*/
