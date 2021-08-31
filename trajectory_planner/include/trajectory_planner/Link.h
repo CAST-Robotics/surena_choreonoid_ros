@@ -23,6 +23,7 @@ class _Link{
         ~_Link();
 
         double q();
+        double dq();
         void update(double q, double dq, double ddq);
         void initPose(Vector3d p, Matrix3d r);
         short int getID();
@@ -32,6 +33,7 @@ class _Link{
 
         MatrixXd FK();
         MatrixXd updateJacobian();
+        MatrixXd getVel();
         void setParams(short int ID, Vector3d a, Vector3d b, double m, Matrix3d inertia, _Link* parent=NULL);
         
     private:

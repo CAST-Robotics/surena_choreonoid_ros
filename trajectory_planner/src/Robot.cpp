@@ -21,9 +21,9 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36
-    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37
-    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115
+    shank_ = 0.3;     // SR1: 0.3, Surena4: 0.36
+    thigh_ = 0.3535;  // SR1: 0.3535, Surena4: 0.37
+    torso_ = 0.09;    // SR1: 0.09, Surena4: 0.115
 
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -91,10 +91,10 @@ Robot::Robot(ros::NodeHandle *nh){
     cout << "Robot Object has been Created" << endl;
 }
 
-void Robot::spinOnline(int iter, double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
+void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
     // update joint positions
     for (int i = 0; i < 13; i ++){
-        links_[i]->update(config[i], 0.0, 0.0);
+        links_[i]->update(config[i], jnt_vel[i], 0.0);
     }
     // Do the Forward Kinematics for Lower Limb
     links_[12]->FK();
@@ -138,17 +138,24 @@ void Robot::updateSolePosition(){
     if(leftSwings_ && (!rightSwings_)){
         lSole_ = rSole_ - links_[6]->getPose() + links_[12]->getPose();
         FKCoM_[index_] = lSole_ - links_[12]->getPose();
+        FKCoMDot_[index_] = - links_[6]->getVel().block<3,1>(0, 0);
+        realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
     else if ((!leftSwings_) && rightSwings_){
+        Matrix<double, 6, 1> q_dot;
         rSole_ = lSole_ - links_[12]->getPose() + links_[6]->getPose();
         FKCoM_[index_] = rSole_ - links_[6]->getPose();
+        FKCoMDot_[index_] = - links_[12]->getVel().block<3,1>(0, 0);
+        realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
     else{   // double support
         FKCoM_[index_] = rSole_ - links_[6]->getPose();
+        FKCoMDot_[index_] = - links_[6]->getVel().block<3,1>(0, 0);
+        realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
         rSoles_[index_] = rSole_;
         lSoles_[index_] = lSole_;
     }
@@ -283,14 +290,14 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double alpha = req.alpha;
     double t_ds = req.t_double_support;
     double t_s = req.t_step;
-    double COM_height = req.COM_height;
+    COM_height_ = req.COM_height;
     double step_len = req.step_length;
     int num_step = req.step_count;
     double dt = req.dt;
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
-    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height, t_s, t_ds, dt, num_step + 2, alpha);
+    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt, num_step + 2, alpha);
     Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
@@ -304,14 +311,14 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
     ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
     ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
-
+    cout << "!!!!!!\n";
     trajectoryPlanner->setFoot(dcm_rf);
     trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
     comd_ = trajectoryPlanner->getCoM(com);
     zmpd_ = trajectoryPlanner->getZMP();
     delete[] dcm_rf;
-
+    cout << "!!!!!!\n";
     anklePlanner->updateFoot(ankle_rf);
     anklePlanner->generateTrajectory();
     lAnkle_ = anklePlanner->getTrajectoryL();
@@ -322,6 +329,8 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     isTrajAvailable_ = true;
 
     FKCoM_ = new Vector3d[size_];
+    FKCoMDot_ = new Vector3d[size_];
+    realXi_ = new Vector3d[size_];
     realZMP_ = new Vector3d[size_];
     rSoles_ = new Vector3d[size_];
     lSoles_ = new Vector3d[size_];
@@ -342,9 +351,15 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         double jnt_angs[12];
         Vector3d right_torque(req.right_ft[1], req.right_ft[2], 0.0);
         Vector3d left_torque(req.left_ft[1], req.left_ft[2], 0.0);
-        double config[] = {0, req.config[0], req.config[1], req.config[2], req.config[3], req.config[4], req.config[5],
-                           req.config[6], req.config[7], req.config[8], req.config[9], req.config[10], req.config[11]};
-        this->spinOnline(req.iter, config, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
+        double config[13];
+        double jnt_vel[13];
+        config[0] = 0;     //Pelvis joint angle
+        jnt_vel[0] = 0;  //Pelvis joint velocity
+        for(int i = 1; i < 13; i++){
+            config[i] = req.config[i-1];
+            jnt_vel[i] = req.jnt_vel[i-1];  
+        }
+        this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
         this->spinOffline(req.iter, jnt_angs);
@@ -359,6 +374,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
     if (req.iter == size_ - 1 ){ 
         write2File(FKCoM_, size_,"CoM Real");
         write2File(realZMP_, size_, "ZMP Real");
+        write2File(realXi_, size_, "Xi Real");
+        write2File(FKCoMDot_, size_, "CoM Velocity Real");
         write2File(rSoles_, size_, "Right Sole");
         write2File(lSoles_, size_, "Left Sole");
     }

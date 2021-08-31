@@ -79,16 +79,17 @@ class robot_sim:
                 right_ft = pybullet.getJointState(self.robotID, 5)[2]
                 right_ft = [right_ft[2], right_ft[3], right_ft[4]]
                 config = [0 for i in range(12)]
-                for idx in range(6):
+                jnt_vel = [0 for i in range(12)]
+                for idx in range(12):
                     config[idx] = pybullet.getJointState(self.robotID, idx)[0]
-                    config[idx + 6] = pybullet.getJointState(self.robotID, idx + 6)[0]
+                    jnt_vel[idx] = pybullet.getJointState(self.robotID, idx)[1]
                 #vel = pybullet.getLinkState(self.robotID, 12)[6]
                 vel = np.array([0, 0, 0])
                 acc = (vel - pre_vel) * self.freq
                 #gyro = pybullet.getLinkState(self.robotID, 12)[7]
                 gyro = np.array([0, 0, 0])
 
-                All = joint_state_handle(self.iter, left_ft, right_ft, config, acc, gyro).jnt_angs
+                All = joint_state_handle(self.iter, left_ft, right_ft, config, jnt_vel, acc, gyro).jnt_angs
                 # print("joint angles",All)
 
                 """temp1 = self.jointLimitsLow_ - np.array(All)
@@ -343,7 +344,7 @@ class robot_sim:
         self.planeID = pybullet.loadURDF("plane.urdf")
         pybullet.setGravity(0,0,-9.81)
         if os.getcwd() != "/home/cast/SurenaV/SurenaOptimization":
-            os.chdir("/home/cast/SurenaProject/Code/SurenaV/ROS_Choreonoid")
+            os.chdir("/home/amirhosein/Amirhosein/Cast/SurenaProject/Code/Choreonoid_ROS")
 
         self.robotID = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/surena4.urdf",useFixedBase = 0)
 

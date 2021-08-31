@@ -102,17 +102,30 @@ public:
                                    float(rightForceSensor->tau().x()),
                                    float(rightForceSensor->tau().y())};
         jntangs.request.iter = idx;
-        //float config[12];
+
+        double cur_q[ioBody->numJoints()];
+        for(int i=0; i < ioBody->numJoints(); ++i){
+                Link* joint = ioBody->joint(i);
+                cur_q[i] = joint->q();
+        }
+
         for (int j=0; j<6; j++){
                 if (j == 0) {
                     jntangs.request.config[j] = qold[j + 2];
                     jntangs.request.config[6+j] = qold[j + 13 + 2];
+                    jntangs.request.jnt_vel[j] = (cur_q[j + 2] - qold[j + 2]) / dt;
+                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13 + 2] - qold[j + 13 + 2]) / dt;
                 }else if (j == 1 || j == 2){
                     jntangs.request.config[j] = qold[j - 1];
                     jntangs.request.config[6+j] = qold[j + 13 - 1];
+                    jntangs.request.jnt_vel[j] = (cur_q[j - 1] - qold[j - 1]) / dt;
+                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13 - 1] - qold[j + 13 - 1]) / dt;
+                    
                 }else {
                     jntangs.request.config[j] = qold[j];
                     jntangs.request.config[6+j] = qold[j + 13];
+                    jntangs.request.jnt_vel[j] = (cur_q[j] - qold[j]) / dt;
+                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13] - qold[j + 13]) / dt;
                 }
             }
         //jntangs.request.config = config;

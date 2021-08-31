@@ -46,6 +46,7 @@ class DCMPlanner: private MinJerk{
         Vector3d* xi_;
         Vector3d* xiDot_;
         Vector3d* COM_;
+        Vector3d* CoMDot_;
         Vector3d* ZMP_;
 
         // Other Points required for Generating Trajectories
