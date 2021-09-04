@@ -21,9 +21,9 @@ Robot::Robot(ros::NodeHandle *nh){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.3;     // SR1: 0.3, Surena4: 0.36
-    thigh_ = 0.3535;  // SR1: 0.3535, Surena4: 0.37
-    torso_ = 0.09;    // SR1: 0.09, Surena4: 0.115
+    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36
+    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37
+    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115
 
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -311,14 +311,12 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
     ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
     ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
-    cout << "!!!!!!\n";
     trajectoryPlanner->setFoot(dcm_rf);
     trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
     comd_ = trajectoryPlanner->getCoM(com);
     zmpd_ = trajectoryPlanner->getZMP();
     delete[] dcm_rf;
-    cout << "!!!!!!\n";
     anklePlanner->updateFoot(ankle_rf);
     anklePlanner->generateTrajectory();
     lAnkle_ = anklePlanner->getTrajectoryL();

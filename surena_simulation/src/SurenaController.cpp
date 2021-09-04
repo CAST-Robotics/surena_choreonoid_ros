@@ -9,13 +9,21 @@
 using namespace std;
 using namespace cnoid;
 using namespace Eigen;
-
+/*
 const double pgain[] = {
     8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
     3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
     3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     8000.0, 8000.0, 8000.0 };
+    */
+//Surena IV
+const double pgain[] = {
+    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0,
+    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 8000.0,
+    8000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
+    3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
+    3000.0, 3000.0, 3000.0 };
 
 const double dgain[] = {
     100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
@@ -38,6 +46,8 @@ class SurenaController : public SimpleController{
     ForceSensor* rightForceSensor;
     AccelerationSensor* accelSensor;
     RateGyroSensor* gyro;
+    int surenaIndex_[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    int sr1Index_[12] = {2, 0, 1, 3, 4, 5, 15, 13, 14, 16, 17, 18};
 
     int size_;
 
@@ -58,7 +68,7 @@ public:
         traj.request.t_double_support = 0.3;
         traj.request.t_step = 1.4;
         traj.request.step_length = 0.25;
-        traj.request.COM_height = 0.6;
+        traj.request.COM_height = 0.66;
         traj.request.step_count = 6;
         traj.request.ankle_height = 0.05;
         dt = io->timeStep();
@@ -73,9 +83,8 @@ public:
         io->enableInput(rightForceSensor);
         accelSensor = ioBody->findDevice<AccelerationSensor>("WaistAccelSensor");
         io->enableInput(accelSensor);
-        gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro");
+        gyro = ioBody->findDevice<RateGyroSensor>("gyrometer");
         io->enableInput(gyro);
-
 
         for(int i=0; i < ioBody->numJoints(); ++i){
             Link* joint = ioBody->joint(i);
@@ -87,71 +96,41 @@ public:
             
         }
        // qold = qref;
-       
         return true;
     }
     virtual bool control() override
     {
         ros::ServiceClient jnt_client = nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
-
+        
         jntangs.request.left_ft = {float(leftForceSensor->f().z()),
                                    float(leftForceSensor->tau().x()),
                                    float(leftForceSensor->tau().y())};
         jntangs.request.right_ft = {float(rightForceSensor->f().z()),
                                    float(rightForceSensor->tau().x()),
                                    float(rightForceSensor->tau().y())};
+                                   
         jntangs.request.iter = idx;
-
         double cur_q[ioBody->numJoints()];
         for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);
                 cur_q[i] = joint->q();
         }
 
-        for (int j=0; j<6; j++){
-                if (j == 0) {
-                    jntangs.request.config[j] = qold[j + 2];
-                    jntangs.request.config[6+j] = qold[j + 13 + 2];
-                    jntangs.request.jnt_vel[j] = (cur_q[j + 2] - qold[j + 2]) / dt;
-                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13 + 2] - qold[j + 13 + 2]) / dt;
-                }else if (j == 1 || j == 2){
-                    jntangs.request.config[j] = qold[j - 1];
-                    jntangs.request.config[6+j] = qold[j + 13 - 1];
-                    jntangs.request.jnt_vel[j] = (cur_q[j - 1] - qold[j - 1]) / dt;
-                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13 - 1] - qold[j + 13 - 1]) / dt;
-                    
-                }else {
-                    jntangs.request.config[j] = qold[j];
-                    jntangs.request.config[6+j] = qold[j + 13];
-                    jntangs.request.jnt_vel[j] = (cur_q[j] - qold[j]) / dt;
-                    jntangs.request.jnt_vel[6+j] = (cur_q[j + 13] - qold[j + 13]) / dt;
-                }
+        for (int j=0; j<12; j++){
+            jntangs.request.config[j] = cur_q[surenaIndex_[j]];
+            jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
             }
-        //jntangs.request.config = config;
         jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
         jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
-        float jnts[12];
+
         if (result){
 
             jnt_client.call(jntangs);
-            //jnts = jntangs.response.jnt_angs;
-            for(int i = 0; i<12; i++){
-                jnts[i] = jntangs.response.jnt_angs[i];
-            }
-            for (int j=0; j<6; j++){
+
+            for (int j=0; j<12; j++)
+                qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
                 
-                if (j == 0 || j == 1) {
-                    qref[j] = jnts[j + 1];
-                    qref[13+j] = jnts[j + 6 + 1];
-                }else if (j == 2){
-                    qref[j] = jnts[j - 2];
-                    qref[13+j] = jnts[j + 6 - 2];
-                }else {
-                    qref[j] = jnts[j];
-                    qref[13+j] = jnts[j+6];
-                }
-            }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);
                 double q = joint->q();
