@@ -18,6 +18,14 @@ void DCMPlanner::setFoot(Vector3d rF[]){
     rF_ = rF;
 }
 
+Vector3d* DCMPlanner::getXiDot(){
+    return xiDot_;
+}
+
+Vector3d* DCMPlanner::get_CoMDot(){
+    return CoMDot_;
+}
+
 Vector3d* DCMPlanner::getXiTrajectory(){
     /*
         This function returns an array of positions with intervals of dt_

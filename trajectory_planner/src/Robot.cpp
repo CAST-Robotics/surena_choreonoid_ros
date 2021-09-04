@@ -12,7 +12,7 @@ void write2File(Vector3d* input, int size, string file_name="data"){
 }
 
 
-Robot::Robot(ros::NodeHandle *nh){
+Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
     trajGenServer_ = nh->advertiseService("/traj_gen", 
             &Robot::trajGenCallback, this);
@@ -88,10 +88,12 @@ Robot::Robot(ros::NodeHandle *nh){
     _Link* lAnkleR = new _Link(12, a[11], b[11], 3.0, Matrix3d::Identity(3, 3), links_[11]);
     links_[12] = lAnkleR;
 
+    onlineWalk_ = robot_ctrl;
+
     cout << "Robot Object has been Created" << endl;
 }
 
-void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
+void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer, double* joint_angles){
     // update joint positions
     for (int i = 0; i < 13; i ++){
         links_[i]->update(config[i], jnt_vel[i], 0.0);
@@ -99,7 +101,23 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     // Do the Forward Kinematics for Lower Limb
     links_[12]->FK();
     links_[6]->FK();    // update all raw values of sensors and link states
-    updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);    
+    updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);
+
+    MatrixXd lfoot(3,1);
+    MatrixXd rfoot(3,1);
+    Matrix3d attitude = MatrixXd::Identity(3,3);
+    MatrixXd pelvis(3,1);
+    lfoot << lAnkle_[iter](0), lAnkle_[iter](1), lAnkle_[iter](2);
+    rfoot << rAnkle_[iter](0), rAnkle_[iter](1), rAnkle_[iter](2);
+    pelvis << comd_[iter](0), comd_[iter](1), comd_[iter](2);
+    Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter], xiDot_[iter], realXi_[iter], COM_height_);
+    cout << zmp_ref << endl << "------\n";
+    FKCoM_[iter] += (onlineWalk_.comController(comd_[iter], CoMDot_[iter], FKCoM_[iter], zmp_ref, realZMP_[iter]) * dt_);
+    cout << pelvis << endl << "=======\n";
+    doIK(pelvis,attitude,lfoot,attitude,rfoot,attitude);
+
+    for(int i = 0; i < 12; i++)
+        joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
 }
 
 void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer){
@@ -293,12 +311,12 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     COM_height_ = req.COM_height;
     double step_len = req.step_length;
     int num_step = req.step_count;
-    double dt = req.dt;
+    dt_ = req.dt;
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
-    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt, num_step + 2, alpha);
-    Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt);
+    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt_, num_step + 2, alpha);
+    Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
     
@@ -313,10 +331,12 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
     cout << "!!!!!!\n";
     trajectoryPlanner->setFoot(dcm_rf);
-    trajectoryPlanner->getXiTrajectory();
+    xiDesired_ = trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
     comd_ = trajectoryPlanner->getCoM(com);
     zmpd_ = trajectoryPlanner->getZMP();
+    xiDot_ = trajectoryPlanner->getXiDot();
+    CoMDot_ = trajectoryPlanner->get_CoMDot();
     delete[] dcm_rf;
     cout << "!!!!!!\n";
     anklePlanner->updateFoot(ankle_rf);
@@ -361,8 +381,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         }
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
-                         Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]));
-        this->spinOffline(req.iter, jnt_angs);
+                         Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]), jnt_angs);
+        //this->spinOffline(req.iter, jnt_angs);
         for(int i = 0; i < 12; i++)
             res.jnt_angs[i] = jnt_angs[i];
         //ROS_INFO("joint angles requested");
@@ -394,6 +414,12 @@ int main(int argc, char* argv[])
 {
     ros::init(argc, argv, "trajectory_node");
     ros::NodeHandle nh;
-    Robot surena(&nh);
+    Matrix3d kp, ki, kcom, kzmp;
+    kp << 1,0,0,0,1,0,0,0,0;
+    ki = kp;
+    kcom = kp;
+    kzmp = kp;
+    Controller default_ctrl(kp, ki, kzmp, kcom);
+    Robot surena(&nh, default_ctrl);
     ros::spin();
 }

@@ -32,6 +32,7 @@ class DCMPlanner: private MinJerk{
         Vector3d* getXiDot();
         Vector3d* getCoM(Vector3d COM_0);
         Vector3d* getZMP();
+        Vector3d* get_CoMDot();
     private:
         // Design Parameters
         double deltaZ_;

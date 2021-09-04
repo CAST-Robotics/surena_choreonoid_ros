@@ -118,16 +118,16 @@ MatrixXd _Link::transformation(){
 MatrixXd _Link::updateJacobian(){
     vector<_Link*> idx;
     _Link *base = this;
-    cout << this->getRot() << endl;
+    //cout << this->getRot() << endl;
     while(base->getID() != 0){
         idx.push_back(base);
         base = base->getParent();
     }
-    cout << "Route:\n";
-    for (int i = 0; i < idx.size(); i++){
-        cout << idx[i]->getID() << "-->";
-    }
-    cout << endl;
+    //cout << "Route:\n";
+    //for (int i = 0; i < idx.size(); i++){
+    //    cout << idx[i]->getID() << "-->";
+    //}
+    //cout << endl;
     MatrixXd jacobian =  MatrixXd::Zero(6,idx.size());
     Vector3d target = this->getPose();
     for(int n = idx.size() - 1; n >= 0; n--){

@@ -39,7 +39,7 @@ void Controller::setK_com_(Matrix3d K_com){
     this->K_com_ = K_com;
 }
 
-int main(){
+/*int main(){
     Matrix3d kp_;
     kp_<<1.0, 1.0, 1.0,
         1.0, 1.0, 1.0,
@@ -75,7 +75,7 @@ int main(){
     cout << result <<endl;
 
 
-}
+}*/
 
 
 
