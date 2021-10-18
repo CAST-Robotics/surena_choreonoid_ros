@@ -90,7 +90,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
     onlineWalk_ = robot_ctrl;
 
-    cout << "Robot Object has been Created" << endl;
+    //cout << "Robot Object has been Created" << endl;
 }
 
 void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer, double* joint_angles){
@@ -110,10 +110,13 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     lfoot << lAnkle_[iter](0), lAnkle_[iter](1), lAnkle_[iter](2);
     rfoot << rAnkle_[iter](0), rAnkle_[iter](1), rAnkle_[iter](2);
     pelvis << comd_[iter](0), comd_[iter](1), comd_[iter](2);
-    Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter], xiDot_[iter], realXi_[iter], COM_height_);
-    cout << zmp_ref << endl << "------\n";
-    FKCoM_[iter] += (onlineWalk_.comController(comd_[iter], CoMDot_[iter], FKCoM_[iter], zmp_ref, realZMP_[iter]) * dt_);
-    cout << pelvis << endl << "=======\n";
+    Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
+    Vector3d cont_out = onlineWalk_.comController(comd_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
+    cout << cont_out(0) << ',' << cont_out(1) << ',' << cont_out(2) << endl;
+    pelvis = cont_out;
+    //cout << pelvis(0) << ',' << pelvis(1) << ',' << pelvis(2) << endl;
+    //cout << pelvis << endl << "=======\n";
+    cntOut_[index_] = cont_out;
     doIK(pelvis,attitude,lfoot,attitude,rfoot,attitude);
 
     for(int i = 0; i < 12; i++)
@@ -193,8 +196,10 @@ Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
 
 Vector3d Robot::ZMPGlobal(Vector3d zmp_r, Vector3d zmp_l, double f_r, double f_l){
     // Calculate ZMP during Double Support Phase
+    Vector3d zmp(0.0, 0.0, 0.0);
     if (f_r + f_l == 0){
         ROS_WARN("No Foot Contact, Check the Robot!");
+        return zmp;
     }
     //assert(!(f_r + f_l == 0));
 
@@ -303,7 +308,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     /*
         ROS service for generating robot COM & ankles trajectories
     */
-    ROS_INFO("Generating Trajectory started.");
+    //ROS_INFO("Generating Trajectory started.");
     size_ = int(((req.step_count + 2) * req.t_step + 1) / req.dt);
     double alpha = req.alpha;
     double t_ds = req.t_double_support;
@@ -342,7 +347,9 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     lAnkle_ = anklePlanner->getTrajectoryL();
     rAnkle_ = anklePlanner->getTrajectoryR();
     delete[] ankle_rf;
-    ROS_INFO("trajectory generated");
+    onlineWalk_.setDt(req.dt);
+    onlineWalk_.setInitCoM(com);
+    //ROS_INFO("trajectory generated");
     res.result = true;
     isTrajAvailable_ = true;
 
@@ -352,6 +359,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     realZMP_ = new Vector3d[size_];
     rSoles_ = new Vector3d[size_];
     lSoles_ = new Vector3d[size_];
+    cntOut_ = new Vector3d[size_];
 
     return true;
 }
@@ -396,6 +404,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(FKCoMDot_, size_, "CoM Velocity Real");
         write2File(rSoles_, size_, "Right Sole");
         write2File(lSoles_, size_, "Left Sole");
+        write2File(cntOut_, size_, "cntOut_");
     }
     //ROS_INFO("joint angles returned");
     //cout << req.iter << endl;
@@ -414,9 +423,11 @@ int main(int argc, char* argv[])
     ros::NodeHandle nh;
     Matrix3d kp, ki, kcom, kzmp;
     kp << 1,0,0,0,1,0,0,0,0;
-    ki = kp;
-    kcom = kp;
-    kzmp = kp;
+    ki = MatrixXd::Zero(3, 3);
+    //kcom = MatrixXd::Zero(3, 3);
+    //kzmp = MatrixXd::Zero(3, 3);
+    kcom << 4,0,0,0,4,0,0,0,0;
+    kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();

@@ -14,18 +14,29 @@ Controller::Controller(Matrix3d K_p, Matrix3d K_i, Matrix3d K_zmp, Matrix3d K_co
 }
 
 Vector3d Controller::dcmController(Vector3d xiRef, Vector3d xiDotRef, Vector3d xiReal, double deltaZVRP){
-    xiErrorInt += xiReal - xiRef;
-    Vector3d xiError = xiReal - xiRef;
+    Vector3d xiError = xiRef - xiReal;
+    xiErrorInt += xiError * dt_;
+    
     Vector3d rRefZMP;
-    rRefZMP = xiRef - xiDotRef/sqrt(9.81/deltaZVRP) + (K_p_*K_p_) * xiError + (K_i_*K_i_) * xiErrorInt;
+    rRefZMP = xiRef - xiDotRef/sqrt(9.81/deltaZVRP) - (K_p_) * xiError + (K_i_) * xiErrorInt;
     return rRefZMP;
 }
 
 Vector3d Controller::comController(Vector3d xCOMRef, Vector3d xDotCOMRef, Vector3d xCOMReal, Vector3d rZMPRef, Vector3d rZMPReal){
     Vector3d xDotStar;
     xDotStar = xDotCOMRef - K_zmp_*(rZMPRef - rZMPReal) + K_com_*(xCOMRef - xCOMReal);
-    return xDotStar;
+    CoM_ += xDotStar * dt_;
+    return CoM_;
 }
+
+void Controller::setDt(double dt){
+    this->dt_ = dt;
+}
+
+void Controller::setInitCoM(Vector3d init_com){
+    this->CoM_ = init_com;
+}
+
 void Controller::setK_p_(Matrix3d K_p){
     this->K_p_ = K_p;
 }
