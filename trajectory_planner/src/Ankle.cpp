@@ -8,7 +8,7 @@ Ankle::Ankle(double step_time, double ds_time, double height, double alpha, shor
     this->height_ = height;
     this->dt_ = dt;
 
-    cout << "ankle Trajectory Planner initialized\n";
+    //cout << "ankle Trajectory Planner initialized\n";
 }
 
 void Ankle::updateFoot(Vector3d foot_pose[]){
@@ -150,7 +150,7 @@ void Ankle::updateTrajectory(bool left_first){
         rFoot_[index] = temp_right;
         index ++;
     }
-    cout << index << endl;
+    //cout << index << endl;
     MinJerk::write2File(lFoot_, length, "lFoot");
     MinJerk::write2File(rFoot_, length, "rFoot");
 }

@@ -64,6 +64,7 @@ class Robot{
         Vector3d* realZMP_;      // current ZMP of robot
         Vector3d* rSoles_;
         Vector3d* lSoles_;
+        Vector3d* cntOut_;
         bool leftSwings_;
         bool rightSwings_;
 

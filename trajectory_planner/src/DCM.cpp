@@ -10,7 +10,7 @@ DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime,
         throw "Invalid Value for alpha";
     this->dt_ = dt;
     this->stepCount_ = stepCount;
-    cout << "DCMPlanner Object created" << endl;
+    //cout << "DCMPlanner Object created" << endl;
 }
 
 void DCMPlanner::setFoot(Vector3d rF[]){
@@ -55,8 +55,9 @@ Vector3d* DCMPlanner::getCoM(Vector3d COM_0){
     for (int i = 1/dt_; i < length; i++){
         inte << 0.0,0.0,0.0;
         for(int j = 0; j < i - 1/dt_; j++)
-            inte += sqrt(K_G/deltaZ_) * xi_[j] * exp(j * dt_ * sqrt(K_G/deltaZ_)) * dt_;
+            inte += sqrt(K_G/deltaZ_) * ((xi_[j] * exp(j * dt_ * sqrt(K_G/deltaZ_))) + (xi_[j + 1] * exp((j + 1) * dt_ * sqrt(K_G/deltaZ_)))) * 0.5 * dt_;
         COM_[i] = (inte + COM_init) * exp(-(i - 1 / dt_)*dt_*sqrt(K_G/deltaZ_)); // COM_0 or COM_init ??
+        COM_[i](2) = xi_[i - int(1/dt_)](2);
         CoMDot_[i] = - sqrt(K_G/deltaZ_) * (COM_[i] - xi_[i - int(1/dt_)]);
     }
     MinJerk::write2File(COM_, length, "COM");

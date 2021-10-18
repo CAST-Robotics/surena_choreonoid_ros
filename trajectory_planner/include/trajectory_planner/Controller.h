@@ -15,7 +15,8 @@ class Controller {
         void setK_i_(Matrix3d K_i);
         void setK_zmp_(Matrix3d K_zmp);
         void setK_com_(Matrix3d K_com);
-
+        void setDt(double dt);
+        void setInitCoM(Vector3d init_com);
 
     private:
         Matrix3d K_p_;
@@ -23,4 +24,6 @@ class Controller {
         Matrix3d K_zmp_;
         Matrix3d K_com_;
         Vector3d xiErrorInt;
+        Vector3d CoM_;
+        double dt_;
 };

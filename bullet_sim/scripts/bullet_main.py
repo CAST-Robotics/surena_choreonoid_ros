@@ -114,6 +114,14 @@ class robot_sim:
             except rospy.ServiceException as e:
                 print("Jntangls Service call failed: %s"%e)
             
+            if self.iter > 2 * self.freq and self.iter < 2 * self.freq + 7:
+                force = (1000.0, 1000.0, 0.0)
+                pybullet.applyExternalForce(objectUniqueId=self.robotID,
+                                            linkIndex=-1,
+                                            forceObj=force,
+                                            posObj=[0.0, 0.0, 0.0],
+                                            flags=pybullet.LINK_FRAME)
+                print("1111111111")
             self.iter += 1
 
     
@@ -347,7 +355,7 @@ class robot_sim:
             os.chdir("/home/amirhosein/Amirhosein/Cast/SurenaProject/Code/Choreonoid_ROS")
 
         self.robotID = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/surena4.urdf",useFixedBase = 0)
-
+        #self.box = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/box.urdf", [0.6,0.115,0],useFixedBase = 1)
         if self.real_time:
             pybullet.setRealTimeSimulation(1)
         else:
