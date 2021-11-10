@@ -72,6 +72,7 @@ class Robot{
 
         Vector3d CoMEstimatorFK(double config[]);
         void updateState(double config[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer);
+        Matrix3d rDot_(Matrix3d R);
         void updateSolePosition();
         Vector3d getZMPLocal(Vector3d torque, double fz);
         Vector3d ZMPGlobal(Vector3d zmp_r, Vector3d zmp_l, double f_r, double f_l);
