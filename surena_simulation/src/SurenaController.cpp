@@ -16,7 +16,7 @@ const double pgain[] = {
     8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
     3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     8000.0, 8000.0, 8000.0 };
-    */
+*/
 //Surena IV
 const double pgain[] = {
     10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0,
@@ -64,12 +64,12 @@ public:
     {
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-        traj.request.alpha = 0.69;
-        traj.request.t_double_support = 0.105;
-        traj.request.t_step = 1.05;
-        traj.request.step_length = 0.6 / 3.6 * 1.05;
-        traj.request.COM_height = 0.677;
-        traj.request.step_count = 6;
+        traj.request.alpha = 0.44;
+        traj.request.t_double_support = 0.1;
+        traj.request.t_step = 1;
+        traj.request.step_length = 0.5 / 3.6 * 1;
+        traj.request.COM_height = 0.63;
+        traj.request.step_count = 4;
         traj.request.ankle_height = 0.025;
         dt = io->timeStep();
         traj.request.dt = dt;
@@ -83,7 +83,7 @@ public:
         io->enableInput(rightForceSensor);
         accelSensor = ioBody->findDevice<AccelerationSensor>("WaistAccelSensor");
         io->enableInput(accelSensor);
-        gyro = ioBody->findDevice<RateGyroSensor>("gyrometer");
+        gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro");
         io->enableInput(gyro);
 
         for(int i=0; i < ioBody->numJoints(); ++i){
@@ -118,8 +118,8 @@ public:
         }
 
         for (int j=0; j<12; j++){
-            jntangs.request.config[j] = cur_q[surenaIndex_[j]];
-            jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
+            jntangs.request.config[j] = cur_q[sr1Index_[j]];
+            jntangs.request.jnt_vel[j] = (cur_q[sr1Index_[j]] - qold[sr1Index_[j]]) / dt;
             }
         jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
         jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
@@ -129,7 +129,7 @@ public:
             jnt_client.call(jntangs);
 
             for (int j=0; j<12; j++)
-                qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
+                qref[sr1Index_[j]] = jntangs.response.jnt_angs[j];
                 
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);
@@ -140,7 +140,7 @@ public:
                 joint->u() = u;
             }
         }
-        
+        cout << "idx: " << idx << endl;
         if (idx < size_ - 1){
             idx ++;
         }

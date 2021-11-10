@@ -70,7 +70,7 @@ class robot_sim:
 
         feasible = True
         pre_vel = np.array([0, 0, 0])
-        while ((self.iter <= size) and feasible):
+        while ((self.iter <= size - 1) and feasible):
             rospy.wait_for_service("/jnt_angs")
             try:
                 joint_state_handle = rospy.ServiceProxy("/jnt_angs", JntAngs)
@@ -114,6 +114,8 @@ class robot_sim:
             except rospy.ServiceException as e:
                 print("Jntangls Service call failed: %s"%e)
             
+            # disturbance
+            '''
             if self.iter > 2 * self.freq and self.iter < 2 * self.freq + 7:
                 force = (1000.0, 1000.0, 0.0)
                 pybullet.applyExternalForce(objectUniqueId=self.robotID,
@@ -121,7 +123,7 @@ class robot_sim:
                                             forceObj=force,
                                             posObj=[0.0, 0.0, 0.0],
                                             flags=pybullet.LINK_FRAME)
-                print("1111111111")
+                '''
             self.iter += 1
 
     

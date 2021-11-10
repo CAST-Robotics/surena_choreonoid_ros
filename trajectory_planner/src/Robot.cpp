@@ -21,9 +21,9 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     
     // SURENA IV geometrical params
     
-    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36
-    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37
-    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115
+    thigh_ = 0.36;  // SR1: 0.3535, Surena4: 0.37, Surena5: 0.36
+    shank_ = 0.35;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
+    torso_ = 0.1;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
 
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -414,7 +414,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
 
 Robot::~Robot(){
     //delete[] links_;
-    delete[] FKCoM_;
+    //delete[] FKCoM_;
 }
 
 int main(int argc, char* argv[])
@@ -424,10 +424,10 @@ int main(int argc, char* argv[])
     Matrix3d kp, ki, kcom, kzmp;
     kp << 1,0,0,0,1,0,0,0,0;
     ki = MatrixXd::Zero(3, 3);
-    //kcom = MatrixXd::Zero(3, 3);
-    //kzmp = MatrixXd::Zero(3, 3);
-    kcom << 4,0,0,0,4,0,0,0,0;
-    kzmp << 0.5,0,0,0,0.5,0,0,0,0;
+    kcom = MatrixXd::Zero(3, 3);
+    kzmp = MatrixXd::Zero(3, 3);
+    //kcom << 4,0,0,0,4,0,0,0,0;
+    //kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();
