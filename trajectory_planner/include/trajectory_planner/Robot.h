@@ -4,6 +4,7 @@
 #include <ros/console.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
+#include "trajectory_planner/GeneralTraj.h"
 
 #include "DCM.h"
 #include "Link.h"
@@ -11,6 +12,7 @@
 #include "Controller.h"
 #include "Ankle.h"
 #include "MinJerk.h"
+#include "GeneralMotion.h"
 
 #include "fstream"
 
@@ -28,6 +30,8 @@ class Robot{
                             trajectory_planner::JntAngs::Response &res);
         bool trajGenCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res);
+        bool generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
+                                trajectory_planner::GeneralTraj::Response &res);
     private:
 
         double thigh_;
@@ -79,6 +83,7 @@ class Robot{
 
         ros::ServiceServer jntAngsServer_;
         ros::ServiceServer trajGenServer_;
+        ros::ServiceServer generalTrajServer_;
         bool isTrajAvailable_;
 
         int index_;

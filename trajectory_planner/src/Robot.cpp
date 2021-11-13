@@ -18,6 +18,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::trajGenCallback, this);
     jntAngsServer_ = nh->advertiseService("/jnt_angs", 
             &Robot::jntAngsCallback, this);
+    generalTrajServer_ = nh->advertiseService("/general_traj", 
+            &Robot::generalTrajCallback, this);
     
     // SURENA IV geometrical params
     
@@ -399,6 +401,33 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     lSoles_ = new Vector3d[size_];
     cntOut_ = new Vector3d[size_];
 
+    return true;
+}
+
+bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
+                                trajectory_planner::GeneralTraj::Response &res)
+{
+    Vector3d init_com_pos(0, 0, 0); 
+    dt_ = req.dt;
+    GeneralMotion* motion_planner = new GeneralMotion(dt_);
+    motion_planner->changeInPlace(Vector3d(req.init_com_pos[0], req.init_com_pos[1], req.init_com_pos[2]), 
+                                  Vector3d(req.final_com_pos[0], req.final_com_pos[1], req.final_com_pos[2]), 
+                                  Vector3d(req.init_com_orient[0], req.init_com_orient[1], req.init_com_orient[2]), 
+                                  Vector3d(req.final_com_orient[0], req.final_com_orient[1], req.final_com_orient[2]),
+                                  Vector3d(req.init_lankle_pos[0], req.init_lankle_pos[1], req.init_lankle_pos[2]), 
+                                  Vector3d(req.final_lankle_pos[0], req.final_lankle_pos[1], req.final_lankle_pos[2]),
+                                  Vector3d(req.init_lankle_orient[0], req.init_lankle_orient[1], req.init_lankle_orient[2]), 
+                                  Vector3d(req.final_lankle_orient[0], req.final_lankle_orient[1], req.final_lankle_orient[2]),
+                                  Vector3d(req.init_rankle_pos[0], req.init_rankle_pos[1], req.init_rankle_pos[2]), 
+                                  Vector3d(req.final_rankle_pos[0], req.final_rankle_pos[1], req.final_rankle_pos[2]),
+                                  Vector3d(req.init_rankle_orient[0], req.init_rankle_orient[1], req.init_rankle_orient[2]), 
+                                  Vector3d(req.final_rankle_orient[0], req.final_rankle_orient[1], req.final_rankle_orient[2]),
+                                  req.time);
+    comd_ = motion_planner->getCOMPos();
+    lAnkle_ = motion_planner->getLAnklePos();
+    rAnkle_ = motion_planner->getRAnklePos();
+    res.duration = motion_planner->getLength();
+    isTrajAvailable_ = true;
     return true;
 }
 

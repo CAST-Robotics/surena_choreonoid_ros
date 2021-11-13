@@ -29,13 +29,13 @@ void GeneralMotion::changeInPlace(Vector3d init_com_pos, Vector3d final_com_pos,
         initial and final euler angles of COM, Left Ankle & Right Ankle (roll, pitch, yaw).
     */
 
-    int length = time / dt_;
-    COMPos_ = new Vector3d[length];
-    COMOrient_ = new Matrix3d[length];
-    LAnklePos_ = new Vector3d[length];
-    LAnkleOrient_ = new Matrix3d[length];
-    RAnklePos_ = new Vector3d[length];
-    RAnkleOrient_ = new Matrix3d[length];
+    int length_ = time / dt_;
+    COMPos_ = new Vector3d[length_];
+    COMOrient_ = new Matrix3d[length_];
+    LAnklePos_ = new Vector3d[length_];
+    LAnkleOrient_ = new Matrix3d[length_];
+    RAnklePos_ = new Vector3d[length_];
+    RAnkleOrient_ = new Matrix3d[length_];
 
     Vector3d* com_pos_coefs = cubicInterpolate<Vector3d>(init_com_pos, final_com_pos, Vector3d::Zero(3), Vector3d::Zero(3), time);
     Vector3d* lankle_pos_coefs = cubicInterpolate<Vector3d>(init_lankle_pos, final_lankle_pos, Vector3d::Zero(3), Vector3d::Zero(3), time);
@@ -49,7 +49,7 @@ void GeneralMotion::changeInPlace(Vector3d init_com_pos, Vector3d final_com_pos,
     Vector3d temp_lankle_orient;
     Vector3d temp_rankle_orient;
 
-    for(int index = 0; index < length; index++){
+    for(int index = 0; index < length_; index++){
         double t = index * dt_;
         // COM Trajectories
         COMPos_[index] = com_pos_coefs[0] + com_pos_coefs[1] * t + com_pos_coefs[2] * pow(t,2) + com_pos_coefs[3] * pow(t,3);

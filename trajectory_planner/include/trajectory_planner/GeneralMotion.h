@@ -32,8 +32,12 @@ class GeneralMotion: private MinJerk{
         Matrix3d* getCOMOrient(){
             return COMOrient_;
             }
+        int getLength(){
+            return length_;
+        }
 
     private:
+        int length_;
         double dt_;
         Vector3d* COMPos_;
         Vector3d* LAnklePos_;
