@@ -29,7 +29,7 @@ void GeneralMotion::changeInPlace(Vector3d init_com_pos, Vector3d final_com_pos,
         initial and final euler angles of COM, Left Ankle & Right Ankle (roll, pitch, yaw).
     */
 
-    int length_ = time / dt_;
+    length_ = time / dt_;
     COMPos_ = new Vector3d[length_];
     COMOrient_ = new Matrix3d[length_];
     LAnklePos_ = new Vector3d[length_];
