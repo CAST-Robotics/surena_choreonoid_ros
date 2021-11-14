@@ -6,5 +6,6 @@ float64 COM_height
 int8 step_count
 float64 ankle_height
 float64 dt
+float64 theta
 ---
 bool result

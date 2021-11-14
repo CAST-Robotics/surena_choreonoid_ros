@@ -317,6 +317,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double step_len = req.step_length;
     int num_step = req.step_count;
     dt_ = req.dt;
+    float theta = req.theta;
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
@@ -326,10 +327,23 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
     
 
-    for (int i = 0; i < num_step; i++){
-        dcm_rf[i+1] << i * step_len, pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
-        ankle_rf[i+1] << i * step_len, pow(-1, i + 1) * torso_, 0.0;
+    if theta >= 0
+        dcm_rf[1] << 0.0, -torso_, 0.0;
+        ankle_rf[1] << 0.0, -torso_, 0.0;
+    else
+        dcm_rf[1] << 0.0, torso_, 0.0;
+        ankle_rf[1] << 0.0, torso_, 0.0;
+    for (int i = 1; i < num_step; i++){
+        if theta >= 0{
+            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * (i * step_len) - sin(i * theta) * pow(-1, i + 1) * torso_ , dcm_rf[i](1) + sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
+            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , dcm_rf[i](1) + sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        }
+        else {
+            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        }
     }
+
     dcm_rf[0] << 0.0, 0.0, 0.0;
     dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
     ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
@@ -382,7 +396,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         config[0] = 0;     //Pelvis joint angle
         jnt_vel[0] = 0;  //Pelvis joint velocity
         for(int i = 1; i < 13; i++){
-            config[i] = req.config[i-1];
+            config[isetFoot] = req.config[i-1];
             jnt_vel[i] = req.jnt_vel[i-1];  
         }
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],

@@ -1,9 +1,10 @@
 #include "DCM.h"
 
-DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount, double alpha){
+DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount, double alpha, double theta){
     this->deltaZ_ = deltaZ;
     this->tStep_ = stepTime;
     this->tDS_ = doubleSupportTime;
+    this->theta_ = theta;
     if(alpha > 0.0 && alpha < 1.0)
         this->alpha_ = alpha;
     else
@@ -179,6 +180,45 @@ Vector3d* DCMPlanner::getZMP(){
         ZMP_[i] = xi_[i] - xiDot_[i] * sqrt(deltaZ_/K_G);
     MinJerk::write2File(ZMP_, length, "ZMP");
     return ZMP_;
+}
+Matrix3d DCMPlanner::yawRotMat(double theta){
+    Matrix3d yowRot;
+    yowRot  << 1, 0, 0,
+               0, cos(theta), -sin(theta),
+               0, sin(theta), cos(theta);
+    return yowRot;
+}
+
+Matrix3d* DCMPlanner::yawRotGen(){
+    Matrix3d* yawRotation_ = new Matrix3d[(stepCount_*tStep_ + 1)/dt_];
+    double ini_theta;
+    double end_theta;
+    for (int i=0; i<1/dt_; i++){ //1 second is for decreasing robot's height from COM_0 to deltaZ
+        yawRotation_[i] = DCMPlanner::yawRotMat(0.0);
+    }
+    for (int i=1; i<stepCount_-1; i++){
+        ini_theta = ((i-1)*theta_ + i*theta_)/2;
+        end_theta = (i*theta_ + (i+1)*theta_)/2;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        for (int j=0; j<tStep_/dt_; j++){
+            double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+            yawRotation_[int((i-1)*tStep_/dt_ + j)] = DCMPlanner::yawRotMat(theta_traj);
+        }
+    }
+    for (int j=0; j<tStep_/dt_; j++){
+        ini_theta = 0.0;
+        end_theta = theta_/2;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+        yawRotation_[j] = DCMPlanner::yawRotMat(theta_traj);
+    }
+    for (int j=0; j<tStep_/dt_; j++){
+        ini_theta = ((stepCount_-2)*theta_ + (stepCount_-1)*theta_)/2;
+        end_theta = (stepCount_-1)*theta_;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+        yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)] = DCMPlanner::yawRotMat(theta_traj);
+    }
 }
 
 DCMPlanner::~DCMPlanner(){

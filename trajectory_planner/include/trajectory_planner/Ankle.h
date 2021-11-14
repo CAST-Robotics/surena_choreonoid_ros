@@ -20,10 +20,14 @@ class Ankle: private MinJerk{
         int stepCount_;
         bool leftFirst_;
         double height_;
+        double theta_;
 
         Vector3d* footPose_;
         Vector3d* lFoot_;
         Vector3d* rFoot_;
+        Matrix3d* lFootRot_;
+        Matrix3d* rFootRot_;
        
         void updateTrajectory(bool left_first);
+        Matrix3d yawRotMat(double theta);
 };
