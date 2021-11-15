@@ -4,6 +4,7 @@
 #include <ros/console.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
+#include "trajectory_planner/GeneralTraj.h"
 
 #include "DCM.h"
 #include "Link.h"
@@ -11,6 +12,7 @@
 #include "Controller.h"
 #include "Ankle.h"
 #include "MinJerk.h"
+#include "GeneralMotion.h"
 
 #include "fstream"
 
@@ -28,6 +30,8 @@ class Robot{
                             trajectory_planner::JntAngs::Response &res);
         bool trajGenCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res);
+        bool generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
+                                trajectory_planner::GeneralTraj::Response &res);
     private:
 
         double thigh_;
@@ -47,14 +51,16 @@ class Robot{
         Matrix3d Rroll(double phi);
         Matrix3d RPitch(double theta);
 
-        Vector3d* comd_;
+        Vector3d* CoMPos_;
+        Matrix3d* CoMRot_;
         Vector3d* zmpd_;
         Vector3d* CoMDot_;
         Vector3d* xiDesired_;
         Vector3d* xiDot_;
-        Vector3d* zmpr_;
-        Vector3d* rAnkle_;
-        Vector3d* lAnkle_;
+        Vector3d* rAnklePos_;
+        Vector3d* lAnklePos_;
+        Matrix3d* rAnkleRot_;
+        Matrix3d* lAnkleRot_;
 
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole
@@ -79,7 +85,9 @@ class Robot{
 
         ros::ServiceServer jntAngsServer_;
         ros::ServiceServer trajGenServer_;
+        ros::ServiceServer generalTrajServer_;
         bool isTrajAvailable_;
+        bool useController_;
 
         int index_;
         int size_;

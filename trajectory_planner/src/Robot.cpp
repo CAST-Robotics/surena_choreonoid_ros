@@ -18,6 +18,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::trajGenCallback, this);
     jntAngsServer_ = nh->advertiseService("/jnt_angs", 
             &Robot::jntAngsCallback, this);
+    generalTrajServer_ = nh->advertiseService("/general_traj", 
+            &Robot::generalTrajCallback, this);
     
     // SURENA IV geometrical params
     
@@ -28,6 +30,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
     isTrajAvailable_ = false;
+    useController_ = false;
 
     Vector3d a[12];
 	Vector3d b[12];
@@ -107,17 +110,16 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);
     MatrixXd pelvis(3,1);
-    lfoot << lAnkle_[iter](0), lAnkle_[iter](1), lAnkle_[iter](2);
-    rfoot << rAnkle_[iter](0), rAnkle_[iter](1), rAnkle_[iter](2);
-    pelvis << comd_[iter](0), comd_[iter](1), comd_[iter](2);
-    Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
-    Vector3d cont_out = onlineWalk_.comController(comd_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
-    //cout << cont_out(0) << ',' << cont_out(1) << ',' << cont_out(2) << endl;
-    pelvis = cont_out;
-    //cout << pelvis(0) << ',' << pelvis(1) << ',' << pelvis(2) << endl;
-    //cout << pelvis << endl << "=======\n";
-    cntOut_[index_] = cont_out;
-    doIK(pelvis,attitude,lfoot,attitude,rfoot,attitude);
+    lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
+    rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
+    pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
+    if(useController_){
+        Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
+        Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
+        pelvis = cont_out;
+        cntOut_[index_] = cont_out;
+    }
+    doIK(pelvis, CoMRot_[iter], lfoot, rAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
 
     for(int i = 0; i < 12; i++)
         joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
@@ -172,7 +174,6 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
 void Robot::updateSolePosition(){
 
     Matrix3d r_dot = this->rDot_(links_[0]->getRot());
-    cout << r_dot << endl;
     if(leftSwings_ && (!rightSwings_)){
         lSole_ = rSole_ - links_[6]->getPose() + links_[12]->getPose();
         FKCoM_[index_] = lSole_ - links_[0]->getRot() * links_[12]->getPose();
@@ -207,7 +208,6 @@ void Robot::updateSolePosition(){
     FKCoMDot_[index_] = (f0 - 4 * f1 + 3 * FKCoM_[index_])/(2 * this->dt_);
     realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
 
-    cout << endl << FKCoMDot_[index_] << endl << "---------------" << endl;
 }
 
 Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
@@ -240,9 +240,9 @@ void Robot::spinOffline(int iter, double* config){
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);
     MatrixXd pelvis(3,1);
-    lfoot << lAnkle_[iter](0), lAnkle_[iter](1), lAnkle_[iter](2);
-    rfoot << rAnkle_[iter](0), rAnkle_[iter](1), rAnkle_[iter](2);
-    pelvis << comd_[iter](0), comd_[iter](1), comd_[iter](2);
+    lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
+    rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
+    pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
     doIK(pelvis,attitude,lfoot,attitude,rfoot,attitude);
 
     for(int i = 0; i < 12; i++)
@@ -375,21 +375,22 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     trajectoryPlanner->setFoot(dcm_rf);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
-    comd_ = trajectoryPlanner->getCoM(com);
+    CoMPos_ = trajectoryPlanner->getCoM(com);
     zmpd_ = trajectoryPlanner->getZMP();
     xiDot_ = trajectoryPlanner->getXiDot();
     CoMDot_ = trajectoryPlanner->get_CoMDot();
     delete[] dcm_rf;
     anklePlanner->updateFoot(ankle_rf);
     anklePlanner->generateTrajectory();
-    lAnkle_ = anklePlanner->getTrajectoryL();
-    rAnkle_ = anklePlanner->getTrajectoryR();
+    lAnklePos_ = anklePlanner->getTrajectoryL();
+    rAnklePos_ = anklePlanner->getTrajectoryR();
     delete[] ankle_rf;
     onlineWalk_.setDt(req.dt);
     onlineWalk_.setInitCoM(com);
     //ROS_INFO("trajectory generated");
     res.result = true;
     isTrajAvailable_ = true;
+    useController_ = true;
 
     FKCoM_ = new Vector3d[size_];
     FKCoMDot_ = new Vector3d[size_];
@@ -398,6 +399,46 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     rSoles_ = new Vector3d[size_];
     lSoles_ = new Vector3d[size_];
     cntOut_ = new Vector3d[size_];
+
+    return true;
+}
+
+bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
+                                trajectory_planner::GeneralTraj::Response &res)
+{
+    dt_ = req.dt;
+    GeneralMotion* motion_planner = new GeneralMotion(dt_);
+    motion_planner->changeInPlace(Vector3d(req.init_com_pos[0], req.init_com_pos[1], req.init_com_pos[2]), 
+                                  Vector3d(req.final_com_pos[0], req.final_com_pos[1], req.final_com_pos[2]), 
+                                  Vector3d(req.init_com_orient[0], req.init_com_orient[1], req.init_com_orient[2]), 
+                                  Vector3d(req.final_com_orient[0], req.final_com_orient[1], req.final_com_orient[2]),
+                                  Vector3d(req.init_lankle_pos[0], req.init_lankle_pos[1], req.init_lankle_pos[2]), 
+                                  Vector3d(req.final_lankle_pos[0], req.final_lankle_pos[1], req.final_lankle_pos[2]),
+                                  Vector3d(req.init_lankle_orient[0], req.init_lankle_orient[1], req.init_lankle_orient[2]), 
+                                  Vector3d(req.final_lankle_orient[0], req.final_lankle_orient[1], req.final_lankle_orient[2]),
+                                  Vector3d(req.init_rankle_pos[0], req.init_rankle_pos[1], req.init_rankle_pos[2]), 
+                                  Vector3d(req.final_rankle_pos[0], req.final_rankle_pos[1], req.final_rankle_pos[2]),
+                                  Vector3d(req.init_rankle_orient[0], req.init_rankle_orient[1], req.init_rankle_orient[2]), 
+                                  Vector3d(req.final_rankle_orient[0], req.final_rankle_orient[1], req.final_rankle_orient[2]),
+                                  req.time);
+    CoMPos_ = motion_planner->getCOMPos();
+    CoMRot_ = motion_planner->getCOMOrient();
+    lAnklePos_ = motion_planner->getLAnklePos();
+    lAnkleRot_ = motion_planner->getLAnkleOrient();
+    rAnklePos_ = motion_planner->getRAnklePos();
+    rAnkleRot_ = motion_planner->getRAnkleOrient();
+
+    size_ = motion_planner->getLength();
+    res.duration = size_;
+    isTrajAvailable_ = true;
+    useController_ = false;
+
+    FKCoM_ = new Vector3d[size_];
+    FKCoMDot_ = new Vector3d[size_];
+    realXi_ = new Vector3d[size_];
+    realZMP_ = new Vector3d[size_];
+    rSoles_ = new Vector3d[size_];
+    lSoles_ = new Vector3d[size_];
 
     return true;
 }
@@ -442,7 +483,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(FKCoMDot_, size_, "CoM Velocity Real");
         write2File(rSoles_, size_, "Right Sole");
         write2File(lSoles_, size_, "Left Sole");
-        write2File(cntOut_, size_, "cntOut_");
+        //write2File(cntOut_, size_, "cntOut_");
     }
     //ROS_INFO("joint angles returned");
     //cout << req.iter << endl;
