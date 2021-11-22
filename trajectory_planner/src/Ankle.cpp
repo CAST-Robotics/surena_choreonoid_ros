@@ -33,6 +33,14 @@ Vector3d* Ankle::getTrajectoryR(){
     return rFoot_;
 }
 
+Matrix3d* Ankle::getRotTrajectoryR(){
+    return rFootRot_;
+}
+
+Matrix3d* Ankle::getRotTrajectoryL(){
+    return lFootRot_;
+}
+
 void Ankle::generateTrajectory(){
 
     int lenght = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;  // +1 second is for decreasing robot's height from COM_0 to deltaZ
@@ -56,8 +64,8 @@ Matrix3d Ankle::yawRotMat(double theta){
 void Ankle::updateTrajectory(bool left_first){
     int index = 0;
     int length = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;
-    Matrix3d* rFootRot_ = new Matrix3d[((stepCount_ + 2) * tStep_ + 1) / dt_];
-    Matrix3d* lFootRot_ = new Matrix3d[((stepCount_ + 2) * tStep_ + 1) / dt_];
+    Matrix3d* rFootRot_ = new Matrix3d[int(((stepCount_ + 2) * tStep_ + 1) / dt_)];
+    Matrix3d* lFootRot_ = new Matrix3d[int(((stepCount_ + 2) * tStep_ + 1) / dt_)];
     // decreasing robot's height
     for (int i = 0; i < (tStep_ + 1)/dt_; i++){
         double time = dt_ * i;
@@ -209,4 +217,6 @@ Ankle::~Ankle(){
     delete[] footPose_;
     delete[] lFoot_;
     delete[] rFoot_;
+    delete[] rFootRot_;
+    delete[] lFootRot_;
 }

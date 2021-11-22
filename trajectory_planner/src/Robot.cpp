@@ -119,8 +119,8 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         pelvis = cont_out;
         cntOut_[index_] = cont_out;
     }
-    doIK(pelvis, CoMRot_[iter], lfoot, rAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
-
+    doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
+    //doIK(pelvis, attitude, lfoot, attitude, rfoot, attitude);
     for(int i = 0; i < 12; i++)
         joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
 }
@@ -359,37 +359,44 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double swing_height = req.ankle_height;
     double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
-    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt_, num_step + 2, alpha);
-    Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_);
+    DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt_, num_step + 2, alpha, theta);
+    Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
-    
 
-    if theta >= 0
+    if (theta >= 0){
         dcm_rf[1] << 0.0, -torso_, 0.0;
         ankle_rf[1] << 0.0, -torso_, 0.0;
-    else
+    }
+    else{
         dcm_rf[1] << 0.0, torso_, 0.0;
-        ankle_rf[1] << 0.0, torso_, 0.0;
+        ankle_rf[1] << 0.0, torso_, 0.0;  
+    }
     for (int i = 1; i < num_step; i++){
-        if theta >= 0{
-            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * (i * step_len) - sin(i * theta) * pow(-1, i + 1) * torso_ , dcm_rf[i](1) + sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
-            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , dcm_rf[i](1) + sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        if (theta >= 0){
+            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
+            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
         }
         else {
-            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
-            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+            dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+            ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
         }
     }
 
+    double final_theta = (num_step - 1) * theta;
     dcm_rf[0] << 0.0, 0.0, 0.0;
-    dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
     ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
-    ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
+    if (theta >= 0)
+        ankle_rf[num_step + 1] << ankle_rf[num_step](0) + pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) - pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
+    else
+        ankle_rf[num_step + 1] << ankle_rf[num_step](0) - pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) + pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
+    dcm_rf[num_step + 1] << (ankle_rf[num_step + 1](0) + ankle_rf[num_step](0)) / 2, (ankle_rf[num_step + 1](1) + ankle_rf[num_step](1)) / 2, 0.0;
+    
     trajectoryPlanner->setFoot(dcm_rf);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);
     CoMPos_ = trajectoryPlanner->getCoM(com);
+    CoMRot_ = trajectoryPlanner->yawRotGen();
     zmpd_ = trajectoryPlanner->getZMP();
     xiDot_ = trajectoryPlanner->getXiDot();
     CoMDot_ = trajectoryPlanner->get_CoMDot();
@@ -398,6 +405,8 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     anklePlanner->generateTrajectory();
     lAnklePos_ = anklePlanner->getTrajectoryL();
     rAnklePos_ = anklePlanner->getTrajectoryR();
+    rAnkleRot_ = anklePlanner->getRotTrajectoryR();
+    lAnkleRot_ = anklePlanner->getRotTrajectoryL();
     delete[] ankle_rf;
     onlineWalk_.setDt(req.dt);
     onlineWalk_.setInitCoM(com);
@@ -475,7 +484,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         config[0] = 0;     //Pelvis joint angle
         jnt_vel[0] = 0;  //Pelvis joint velocity
         for(int i = 1; i < 13; i++){
-            config[isetFoot] = req.config[i-1];
+            config[i] = req.config[i-1];
             jnt_vel[i] = req.jnt_vel[i-1];  
         }
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],

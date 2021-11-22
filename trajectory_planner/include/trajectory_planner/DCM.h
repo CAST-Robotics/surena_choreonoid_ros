@@ -25,7 +25,7 @@ class DCMPlanner: private MinJerk{
     */
     friend class Surena;
     public:
-        DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount = 6, double alpha = 0.5, double theta);
+        DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount = 6, double alpha = 0.5, double theta = 0.0);
         ~DCMPlanner();
         void setFoot(Vector3d rF[]);
         Vector3d* getXiTrajectory();
@@ -33,6 +33,7 @@ class DCMPlanner: private MinJerk{
         Vector3d* getCoM(Vector3d COM_0);
         Vector3d* getZMP();
         Vector3d* get_CoMDot();
+        Matrix3d* yawRotGen();
     private:
         // Design Parameters
         double deltaZ_;
@@ -65,6 +66,5 @@ class DCMPlanner: private MinJerk{
         void updateXiEoS();
         void updateXiDSPositions();
         Matrix3d yawRotMat(double theta);
-        Matrix3d* yawRotGen();
         Vector3d* minJerkInterpolate(Vector3d theta_ini, Vector3d theta_f, Vector3d theta_dot_ini, Vector3d theta_dot_f, double tf);
 };

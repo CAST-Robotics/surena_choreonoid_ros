@@ -64,7 +64,7 @@ public:
     virtual bool initialize(SimpleControllerIO* io) override
     {
         dt = io->timeStep();
-        /* DCM Walk
+        //DCM Walk
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
         traj.request.alpha = 0.44;
@@ -72,20 +72,21 @@ public:
         traj.request.t_step = 1;
         traj.request.step_length = 0.5 / 3.6 * 1;
         traj.request.COM_height = 0.63;
-        traj.request.step_count = 4;
+        traj.request.step_count = 20;
         traj.request.ankle_height = 0.025;
+        traj.request.theta = 0.1;
         traj.request.dt = dt;
+        //cout<<"adeawewa"<<endl;
         size_ = int(((traj.request.step_count + 2) * traj.request.t_step + 1) / traj.request.dt);
         client.call(traj);
         result = traj.response.result;
-        */
-
+        /*
         // General Motion
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
         trajectory_planner::GeneralTraj general_traj;
         general_traj.request.init_com_pos = {0, 0, 0.71};
         general_traj.request.init_com_orient = {0, 0, 0};
-        general_traj.request.final_com_pos = {0, 0, 0.71};
+        general_traj.request.final_com_pos = {0, 0, 0.67};
         general_traj.request.final_com_orient = {0, 0, 0};
 
         general_traj.request.init_lankle_pos = {0, 0.1, 0};
@@ -95,8 +96,8 @@ public:
 
         general_traj.request.init_rankle_pos = {0, -0.1, 0};
         general_traj.request.init_rankle_orient = {0, 0, 0};
-        general_traj.request.final_rankle_pos = {0, -0.1, 0.02};
-        general_traj.request.final_rankle_orient = {0, 0, 0.2};
+        general_traj.request.final_rankle_pos = {0, -0.1, 0};
+        general_traj.request.final_rankle_orient = {0, 0, 0};
 
         general_traj.request.time = 2;
         general_traj.request.dt = dt;
@@ -106,8 +107,7 @@ public:
         cout << "client called" << endl;
         size_ = general_traj.response.duration;
         cout << "size = " << size_ << endl;
-        //
-
+        */
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
         rightForceSensor = ioBody->findDevice<ForceSensor>("RightAnkleForceSensor");

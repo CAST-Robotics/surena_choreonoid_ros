@@ -70,8 +70,9 @@ void DCMPlanner::updateVRP(){
     // Updates Virtual Repelant Points !! should be called after setFoot() !!
     rVRP_ = new Vector3d[this->stepCount_];
     Vector3d deltaZ(0.0,0.0,deltaZ_);
-    for (int i = 0 ; i < this->stepCount_; i ++)
+    for (int i = 0 ; i < this->stepCount_; i ++){
         rVRP_[i] = rF_[i] + deltaZ;
+    }
 }
 
 void DCMPlanner::updateSS(){
@@ -81,7 +82,6 @@ void DCMPlanner::updateSS(){
     xiDot_ = new Vector3d[length];
     int stepNum;
     double time;
-
     for (int i = 0; i < length; i ++){
         time = dt_ * i;
         stepNum = floor(time / tStep_);
@@ -190,7 +190,7 @@ Matrix3d DCMPlanner::yawRotMat(double theta){
 }
 
 Matrix3d* DCMPlanner::yawRotGen(){
-    Matrix3d* yawRotation_ = new Matrix3d[(stepCount_*tStep_ + 1)/dt_];
+    yawRotation_ = new Matrix3d[int ((stepCount_*tStep_ + 1)/dt_)];
     double ini_theta;
     double end_theta;
     for (int i=0; i<1/dt_; i++){ //1 second is for decreasing robot's height from COM_0 to deltaZ
@@ -219,6 +219,7 @@ Matrix3d* DCMPlanner::yawRotGen(){
         double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
         yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)] = DCMPlanner::yawRotMat(theta_traj);
     }
+    return yawRotation_;
 }
 
 DCMPlanner::~DCMPlanner(){
@@ -231,4 +232,5 @@ DCMPlanner::~DCMPlanner(){
     delete[] xiDSE_;
     delete[] COM_;
     delete[] ZMP_;
+    delete[] yawRotation_;
 }
