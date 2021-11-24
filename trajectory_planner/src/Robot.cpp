@@ -172,7 +172,7 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
 void Robot::updateSolePosition(){
 
     Matrix3d r_dot = this->rDot_(links_[0]->getRot());
-    cout << r_dot << endl;
+    //cout << r_dot << endl;
     if(leftSwings_ && (!rightSwings_)){
         lSole_ = rSole_ - links_[6]->getPose() + links_[12]->getPose();
         FKCoM_[index_] = lSole_ - links_[0]->getRot() * links_[12]->getPose();
@@ -207,7 +207,7 @@ void Robot::updateSolePosition(){
     FKCoMDot_[index_] = (f0 - 4 * f1 + 3 * FKCoM_[index_])/(2 * this->dt_);
     realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
 
-    cout << endl << FKCoMDot_[index_] << endl << "---------------" << endl;
+    //cout << endl << FKCoMDot_[index_] << endl << "---------------" << endl;
 }
 
 Vector3d Robot::getZMPLocal(Vector3d torque, double fz){
@@ -353,6 +353,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double t_s = req.t_step;
     COM_height_ = req.COM_height;
     double step_len = req.step_length;
+    double step_width = req.step_width;
     int num_step = req.step_count;
     dt_ = req.dt;
     double swing_height = req.ankle_height;
@@ -363,15 +364,26 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
     
+    int sign;
+    if (step_width == 0){sign = 1;}
+    else{sign = (step_width/abs(step_width));}
 
-    for (int i = 0; i < num_step; i++){
-        dcm_rf[i+1] << i * step_len, pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
-        ankle_rf[i+1] << i * step_len, pow(-1, i + 1) * torso_, 0.0;
-    }
+    ankle_rf[0] << 0.0, torso_ * sign, 0.0;
+    ankle_rf[1] << 0.0, torso_ * -sign, 0.0;
     dcm_rf[0] << 0.0, 0.0, 0.0;
-    dcm_rf[num_step + 1] << dcm_rf[num_step](0), 0.0, 0.0;
-    ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
-    ankle_rf[num_step + 1] << ankle_rf[num_step](0), -ankle_rf[num_step](1), 0.0;
+    dcm_rf[1] << 0.0, torso_ * -sign, 0.0;
+    for(int i = 2; i <= num_step + 1; i ++){
+        ankle_rf[i] = ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+        dcm_rf[i] << ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+    }
+    
+    dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
+
+    for (int i = 0; i < num_step+2; i ++){
+        cout << "rF[" << i << "]:" << endl;
+        cout << ankle_rf[i].transpose() << endl;
+        cout << dcm_rf[i].transpose() << endl << "------------------" << endl;
+    }   
     trajectoryPlanner->setFoot(dcm_rf);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     Vector3d com(0.0,0.0,init_COM_height);

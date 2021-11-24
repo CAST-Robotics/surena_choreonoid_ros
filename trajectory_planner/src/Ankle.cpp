@@ -102,7 +102,7 @@ void Ankle::updateTrajectory(bool left_first){
     }
 
     else{       // Right Foot Swings first
-        for (int step = 1; step < num_step + 1 ; step ++){
+        for (int step = 1; step < stepCount_ + 1 ; step ++){
             if (step % 2 != 0){     // Left is support, Right swings
                 for (double time = 0; time < (1 - alpha_) * tDS_; time += dt_){
                     lFoot_[index] = footPose_[step];
