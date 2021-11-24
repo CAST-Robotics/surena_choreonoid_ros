@@ -5,6 +5,7 @@
 #include <ros/ros.h>
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/JntAngs.h"
+#include "trajectory_planner/GeneralTraj.h"
 
 using namespace std;
 using namespace cnoid;
@@ -62,21 +63,55 @@ public:
 
     virtual bool initialize(SimpleControllerIO* io) override
     {
+        dt = io->timeStep();
+        
+        //DCM Walk
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-        traj.request.alpha = 0.5;
-        traj.request.t_double_support = 0.2;
-        traj.request.t_step = 1.0;
-        traj.request.step_length = 0.0 / 3.6 * traj.request.t_step;
+
         traj.request.step_width = -0.05;
-        traj.request.COM_height = 0.67;
-        traj.request.step_count = 6;
+        traj.request.alpha = 0.44;
+        traj.request.t_double_support = 0.1;
+        traj.request.t_step = 1;
+        traj.request.step_length = 0.5 / 3.6 * 1;
+        traj.request.COM_height = 0.68;
+        traj.request.step_count = 4;
         traj.request.ankle_height = 0.025;
-        dt = io->timeStep();
+        traj.request.theta = 0;
         traj.request.dt = dt;
-        size_ = int(((traj.request.step_count + 2) * traj.request.t_step + 1) / traj.request.dt);
-        client.call(traj);
+        //cout<<"adeawewa"<<endl;
+        size_ = int(((traj.request.step_count + 2) * traj.request.t_step) / traj.request.dt);
         result = traj.response.result;
+        
+        // General Motion
+        ros::ServiceClient gen_client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
+        trajectory_planner::GeneralTraj general_traj;
+        general_traj.request.init_com_pos = {0, 0, 0.71};
+        general_traj.request.init_com_orient = {0, 0, 0};
+        general_traj.request.final_com_pos = {0, 0, 0.68};
+        general_traj.request.final_com_orient = {0, 0, 0};
+
+        general_traj.request.init_lankle_pos = {0, 0.1, 0};
+        general_traj.request.init_lankle_orient = {0, 0, 0};
+        general_traj.request.final_lankle_pos = {0, 0.1, 0};
+        general_traj.request.final_lankle_orient = {0, 0, 0};
+
+        general_traj.request.init_rankle_pos = {0, -0.1, 0};
+        general_traj.request.init_rankle_orient = {0, 0, 0};
+        general_traj.request.final_rankle_pos = {0, -0.1, 0};
+        general_traj.request.final_rankle_orient = {0, 0, 0};
+
+        general_traj.request.time = 2;
+        general_traj.request.dt = dt;
+        result = true;
+
+        gen_client.call(general_traj);
+        client.call(traj);
+        size_ = 8000;
+        //cout << "client called" << endl;
+        //size_ = general_traj.response.duration;
+        //cout << "size = " << size_ << endl;
+        
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
         rightForceSensor = ioBody->findDevice<ForceSensor>("RightAnkleForceSensor");
@@ -141,7 +176,7 @@ public:
                 joint->u() = u;
             }
         }
-        cout << "idx: " << idx << endl;
+        //cout << "idx: " << idx << endl;
         if (idx < size_ - 1){
             idx ++;
         }

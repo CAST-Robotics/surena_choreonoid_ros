@@ -60,6 +60,7 @@ add_service_files(
   FILES
   JntAngs.srv
   Trajectory.srv
+  GeneralTraj.srv
 )
 
 ## Generate actions in the 'action' folder

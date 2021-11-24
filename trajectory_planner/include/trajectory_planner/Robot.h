@@ -4,6 +4,7 @@
 #include <ros/console.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
+#include "trajectory_planner/GeneralTraj.h"
 
 #include "DCM.h"
 #include "Link.h"
@@ -11,6 +12,7 @@
 #include "Controller.h"
 #include "Ankle.h"
 #include "MinJerk.h"
+#include "GeneralMotion.h"
 
 #include "fstream"
 
@@ -28,6 +30,10 @@ class Robot{
                             trajectory_planner::JntAngs::Response &res);
         bool trajGenCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res);
+        bool generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
+                                trajectory_planner::GeneralTraj::Response &res);
+
+        int findTrajIndex(vector<int> arr, int n, int K);
     private:
 
         double thigh_;
@@ -41,20 +47,38 @@ class Robot{
         PID* CoMController_;
         Controller onlineWalk_;
 
+        template <typename T>
+        T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){
+            /*
+                This function appends a new trajectory to an old one.
+                for example:
+                when you want to call general_traj service twice.
+            */
+            int total_size = old_size + new_size;
+            T* temp_traj = new T[total_size];
+            copy(old_traj, old_traj + old_size, temp_traj);
+            delete[] old_traj;
+            old_traj = temp_traj;
+            temp_traj = new_traj;
+            copy(temp_traj, temp_traj + new_size, old_traj + old_size);
+            return old_traj;
+        }
+
         void doIK(MatrixXd pelvisP, Matrix3d pelvisR, MatrixXd leftAnkleP, Matrix3d leftAnkleR, MatrixXd rightAnkleP, Matrix3d rightAnkleR);
         double* geometricIK(MatrixXd p1, MatrixXd r1, MatrixXd p7, MatrixXd r7, bool isLeft);
-
         Matrix3d Rroll(double phi);
         Matrix3d RPitch(double theta);
 
-        Vector3d* comd_;
+        Vector3d* CoMPos_;
+        Matrix3d* CoMRot_;
         Vector3d* zmpd_;
         Vector3d* CoMDot_;
         Vector3d* xiDesired_;
         Vector3d* xiDot_;
-        Vector3d* zmpr_;
-        Vector3d* rAnkle_;
-        Vector3d* lAnkle_;
+        Vector3d* rAnklePos_;
+        Vector3d* lAnklePos_;
+        Matrix3d* rAnkleRot_;
+        Matrix3d* lAnkleRot_;
 
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole
@@ -79,9 +103,14 @@ class Robot{
 
         ros::ServiceServer jntAngsServer_;
         ros::ServiceServer trajGenServer_;
+        ros::ServiceServer generalTrajServer_;
         bool isTrajAvailable_;
+        bool useController_;
 
         int index_;
         int size_;
+        int dataSize_;
+        vector<int> trajSizes_;
+        vector<bool> trajContFlags_;
         double COM_height_;
 };
