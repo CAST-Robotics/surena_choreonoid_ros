@@ -183,6 +183,7 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
 void Robot::updateSolePosition(){
 
     Matrix3d r_dot = this->rDot_(links_[0]->getRot());
+
     if(leftSwings_ && (!rightSwings_)){
         lSole_ = rSole_ - links_[6]->getPose() + links_[12]->getPose();
         FKCoM_[index_] = lSole_ - links_[0]->getRot() * links_[12]->getPose();
@@ -383,6 +384,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     double t_s = req.t_step;
     COM_height_ = req.COM_height;
     double step_len = req.step_length;
+    double step_width = req.step_width;
     int num_step = req.step_count;
     dt_ = req.dt;
     float theta = req.theta;
@@ -393,7 +395,28 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
+/*
+    int sign;
+    if (step_width == 0){sign = 1;}
+    else{sign = (step_width/abs(step_width));}
 
+    ankle_rf[0] << 0.0, torso_ * sign, 0.0;
+    ankle_rf[1] << 0.0, torso_ * -sign, 0.0;
+    dcm_rf[0] << 0.0, 0.0, 0.0;
+    dcm_rf[1] << 0.0, torso_ * -sign, 0.0;
+    for(int i = 2; i <= num_step + 1; i ++){
+        ankle_rf[i] = ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+        dcm_rf[i] << ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+    }
+    
+    dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
+
+    for (int i = 0; i < num_step+2; i ++){
+        cout << "rF[" << i << "]:" << endl;in(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * tor
+        cout << ankle_rf[i].transpose() << endl;
+        cout << dcm_rf[i].transpose() << endl << "------------------" << endl;
+    }   
+*/
     if (theta >= 0){
         dcm_rf[1] << 0.0, -torso_, 0.0;
         ankle_rf[1] << 0.0, -torso_, 0.0;

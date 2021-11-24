@@ -143,6 +143,7 @@ void Ankle::updateTrajectory(bool left_first){
 
     else{       // Right Foot Swings first
         for (int step = 1; step < stepCount_ + 1 ; step ++){
+
             double theta_ini = (step-1)*theta_;
             double theta_end = (step)*theta_;
             if (step % 2 != 0){     // Left is support, Right swings

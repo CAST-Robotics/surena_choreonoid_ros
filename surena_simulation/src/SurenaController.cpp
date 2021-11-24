@@ -68,6 +68,8 @@ public:
         //DCM Walk
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
+
+        traj.request.step_width = -0.05;
         traj.request.alpha = 0.44;
         traj.request.t_double_support = 0.1;
         traj.request.t_step = 1;
