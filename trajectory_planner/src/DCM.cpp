@@ -39,27 +39,29 @@ Vector3d* DCMPlanner::getXiTrajectory(){
     return xi_;
 }
 
-Vector3d* DCMPlanner::getCoM(Vector3d COM_0){
-    int length = int((stepCount_ * tStep_ + 1) / dt_);  // +1 second is for decreasing robot's height from COM_0 to deltaZ
+Vector3d* DCMPlanner::getCoM(){
+    int length = int((stepCount_ * tStep_) / dt_);  // +1 second is for decreasing robot's height from COM_0 to deltaZ
     COM_ = new Vector3d[length];
     CoMDot_ = new Vector3d[length];
     // decreasing robot's height
     Vector3d COM_init(0.0, 0.0, deltaZ_);  // initial COM when robot start to walk
-    Vector3d* coefs = this->minJerkInterpolate(COM_0, COM_init, Vector3d::Zero(3), Vector3d::Zero(3), 1);
+    /*
+     Vector3d* coefs = this->minJerkInterpolate(COM_0, COM_init, Vector3d::Zero(3), Vector3d::Zero(3), 1);
     for (int i = 0; i < 1/dt_; i++){
         double time = dt_ * i;
         COM_[i] = coefs[0] + coefs[1] * time + coefs[2] * pow(time,2) + coefs[3] * pow(time,3);
         CoMDot_[i] = coefs[1] + 2 * coefs[2] * time + 3 * coefs[3] * pow(time, 2);
     }
+    */
     // COM trajectory based on DCM
     Vector3d inte;
-    for (int i = 1/dt_; i < length; i++){
+    for (int i = 0; i < length; i++){
         inte << 0.0,0.0,0.0;
-        for(int j = 0; j < i - 1/dt_; j++)
+        for(int j = 0; j < i; j++)
             inte += sqrt(K_G/deltaZ_) * ((xi_[j] * exp(j * dt_ * sqrt(K_G/deltaZ_))) + (xi_[j + 1] * exp((j + 1) * dt_ * sqrt(K_G/deltaZ_)))) * 0.5 * dt_;
-        COM_[i] = (inte + COM_init) * exp(-(i - 1 / dt_)*dt_*sqrt(K_G/deltaZ_)); // COM_0 or COM_init ??
-        COM_[i](2) = xi_[i - int(1/dt_)](2);
-        CoMDot_[i] = - sqrt(K_G/deltaZ_) * (COM_[i] - xi_[i - int(1/dt_)]);
+        COM_[i] = (inte + COM_init) * exp(-i*dt_*sqrt(K_G/deltaZ_)); // COM_0 or COM_init ??
+        COM_[i](2) = xi_[i](2);
+        CoMDot_[i] = - sqrt(K_G/deltaZ_) * (COM_[i] - xi_[i]);
     }
     MinJerk::write2File(COM_, length, "COM");
     MinJerk::write2File(CoMDot_, length, "COMDot");
@@ -190,12 +192,10 @@ Matrix3d DCMPlanner::yawRotMat(double theta){
 }
 
 Matrix3d* DCMPlanner::yawRotGen(){
-    yawRotation_ = new Matrix3d[int ((stepCount_*tStep_ + 1)/dt_)];
+    yawRotation_ = new Matrix3d[int ((stepCount_*tStep_)/dt_)];
     double ini_theta;
     double end_theta;
-    for (int i=0; i<1/dt_; i++){ //1 second is for decreasing robot's height from COM_0 to deltaZ
-        yawRotation_[i] = DCMPlanner::yawRotMat(0.0);
-    }
+    
     for (int i=1; i<stepCount_-1; i++){
         ini_theta = ((i-1)*theta_ + i*theta_)/2;
         end_theta = (i*theta_ + (i+1)*theta_)/2;

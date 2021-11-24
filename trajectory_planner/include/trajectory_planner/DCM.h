@@ -30,7 +30,7 @@ class DCMPlanner: private MinJerk{
         void setFoot(Vector3d rF[]);
         Vector3d* getXiTrajectory();
         Vector3d* getXiDot();
-        Vector3d* getCoM(Vector3d COM_0);
+        Vector3d* getCoM();
         Vector3d* getZMP();
         Vector3d* get_CoMDot();
         Matrix3d* yawRotGen();

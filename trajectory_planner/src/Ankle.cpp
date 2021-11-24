@@ -43,9 +43,11 @@ Matrix3d* Ankle::getRotTrajectoryL(){
 
 void Ankle::generateTrajectory(){
 
-    int lenght = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;  // +1 second is for decreasing robot's height from COM_0 to deltaZ
-    lFoot_ = new Vector3d[lenght];
-    rFoot_ = new Vector3d[lenght];
+    int length = int(((stepCount_ + 2) * tStep_) / dt_) + 100;  // +1 second is for decreasing robot's height from COM_0 to deltaZ
+    lFoot_ = new Vector3d[length];
+    rFoot_ = new Vector3d[length];
+    rFootRot_ = new Matrix3d[length];
+    lFootRot_ = new Matrix3d[length];
 
     if(leftFirst_)
         updateTrajectory(true);
@@ -63,11 +65,9 @@ Matrix3d Ankle::yawRotMat(double theta){
 
 void Ankle::updateTrajectory(bool left_first){
     int index = 0;
-    int length = int(((stepCount_ + 2) * tStep_ + 1) / dt_) + 100;
-    Matrix3d* rFootRot_ = new Matrix3d[int(((stepCount_ + 2) * tStep_ + 1) / dt_)];
-    Matrix3d* lFootRot_ = new Matrix3d[int(((stepCount_ + 2) * tStep_ + 1) / dt_)];
-    // decreasing robot's height
-    for (int i = 0; i < (tStep_ + 1)/dt_; i++){
+    int length = int(((stepCount_ + 2) * tStep_) / dt_) + 100;
+
+    for (int i = 0; i < (tStep_)/dt_; i++){
         double time = dt_ * i;
         if(footPose_[0](1) > footPose_[1](1)){
             lFoot_[index] = footPose_[0];
@@ -142,7 +142,7 @@ void Ankle::updateTrajectory(bool left_first){
     }
 
     else{       // Right Foot Swings first
-        for (int step = 1; step < num_step + 1 ; step ++){
+        for (int step = 1; step < stepCount_ + 1 ; step ++){
             double theta_ini = (step-1)*theta_;
             double theta_end = (step)*theta_;
             if (step % 2 != 0){     // Left is support, Right swings
