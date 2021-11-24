@@ -25,20 +25,22 @@ class DCMPlanner: private MinJerk{
     */
     friend class Surena;
     public:
-        DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount = 6, double alpha = 0.5);
+        DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount = 6, double alpha = 0.5, double theta = 0.0);
         ~DCMPlanner();
         void setFoot(Vector3d rF[]);
         Vector3d* getXiTrajectory();
         Vector3d* getXiDot();
-        Vector3d* getCoM(Vector3d COM_0);
+        Vector3d* getCoM();
         Vector3d* getZMP();
         Vector3d* get_CoMDot();
+        Matrix3d* yawRotGen();
     private:
         // Design Parameters
         double deltaZ_;
         double tStep_;
         double tDS_;
         double alpha_;
+        double theta_;
 
         double dt_;         // sampling time
         int stepCount_;     // trajectories will be generated over how many steps
@@ -56,13 +58,13 @@ class DCMPlanner: private MinJerk{
         Vector3d* xiEOS_;
         Vector3d* xiDSI_;
         Vector3d* xiDSE_;
-
+        Matrix3d* yawRotation_;
         // Functions for generating trajectories
         void updateVRP();
         void updateSS();
         void updateDS();
         void updateXiEoS();
         void updateXiDSPositions();
-        
+        Matrix3d yawRotMat(double theta);
         Vector3d* minJerkInterpolate(Vector3d theta_ini, Vector3d theta_f, Vector3d theta_dot_ini, Vector3d theta_dot_f, double tf);
 };

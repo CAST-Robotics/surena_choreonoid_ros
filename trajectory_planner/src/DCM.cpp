@@ -1,9 +1,10 @@
 #include "DCM.h"
 
-DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount, double alpha){
+DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount, double alpha, double theta){
     this->deltaZ_ = deltaZ;
     this->tStep_ = stepTime;
     this->tDS_ = doubleSupportTime;
+    this->theta_ = theta;
     if(alpha > 0.0 && alpha < 1.0)
         this->alpha_ = alpha;
     else
@@ -38,27 +39,29 @@ Vector3d* DCMPlanner::getXiTrajectory(){
     return xi_;
 }
 
-Vector3d* DCMPlanner::getCoM(Vector3d COM_0){
-    int length = int((stepCount_ * tStep_ + 1) / dt_);  // +1 second is for decreasing robot's height from COM_0 to deltaZ
+Vector3d* DCMPlanner::getCoM(){
+    int length = int((stepCount_ * tStep_) / dt_);  // +1 second is for decreasing robot's height from COM_0 to deltaZ
     COM_ = new Vector3d[length];
     CoMDot_ = new Vector3d[length];
     // decreasing robot's height
     Vector3d COM_init(0.0, 0.0, deltaZ_);  // initial COM when robot start to walk
-    Vector3d* coefs = this->minJerkInterpolate(COM_0, COM_init, Vector3d::Zero(3), Vector3d::Zero(3), 1);
+    /*
+     Vector3d* coefs = this->minJerkInterpolate(COM_0, COM_init, Vector3d::Zero(3), Vector3d::Zero(3), 1);
     for (int i = 0; i < 1/dt_; i++){
         double time = dt_ * i;
         COM_[i] = coefs[0] + coefs[1] * time + coefs[2] * pow(time,2) + coefs[3] * pow(time,3);
         CoMDot_[i] = coefs[1] + 2 * coefs[2] * time + 3 * coefs[3] * pow(time, 2);
     }
+    */
     // COM trajectory based on DCM
     Vector3d inte;
-    for (int i = 1/dt_; i < length; i++){
+    for (int i = 0; i < length; i++){
         inte << 0.0,0.0,0.0;
-        for(int j = 0; j < i - 1/dt_; j++)
+        for(int j = 0; j < i; j++)
             inte += sqrt(K_G/deltaZ_) * ((xi_[j] * exp(j * dt_ * sqrt(K_G/deltaZ_))) + (xi_[j + 1] * exp((j + 1) * dt_ * sqrt(K_G/deltaZ_)))) * 0.5 * dt_;
-        COM_[i] = (inte + COM_init) * exp(-(i - 1 / dt_)*dt_*sqrt(K_G/deltaZ_)); // COM_0 or COM_init ??
-        COM_[i](2) = xi_[i - int(1/dt_)](2);
-        CoMDot_[i] = - sqrt(K_G/deltaZ_) * (COM_[i] - xi_[i - int(1/dt_)]);
+        COM_[i] = (inte + COM_init) * exp(-i*dt_*sqrt(K_G/deltaZ_)); // COM_0 or COM_init ??
+        COM_[i](2) = xi_[i](2);
+        CoMDot_[i] = - sqrt(K_G/deltaZ_) * (COM_[i] - xi_[i]);
     }
     MinJerk::write2File(COM_, length, "COM");
     MinJerk::write2File(CoMDot_, length, "COMDot");
@@ -69,8 +72,9 @@ void DCMPlanner::updateVRP(){
     // Updates Virtual Repelant Points !! should be called after setFoot() !!
     rVRP_ = new Vector3d[this->stepCount_];
     Vector3d deltaZ(0.0,0.0,deltaZ_);
-    for (int i = 0 ; i < this->stepCount_; i ++)
+    for (int i = 0 ; i < this->stepCount_; i ++){
         rVRP_[i] = rF_[i] + deltaZ;
+    }
 }
 
 void DCMPlanner::updateSS(){
@@ -80,7 +84,6 @@ void DCMPlanner::updateSS(){
     xiDot_ = new Vector3d[length];
     int stepNum;
     double time;
-
     for (int i = 0; i < length; i ++){
         time = dt_ * i;
         stepNum = floor(time / tStep_);
@@ -180,6 +183,44 @@ Vector3d* DCMPlanner::getZMP(){
     MinJerk::write2File(ZMP_, length, "ZMP");
     return ZMP_;
 }
+Matrix3d DCMPlanner::yawRotMat(double theta){
+    Matrix3d yowRot;
+    yowRot  << 1, 0, 0,
+               0, cos(theta), -sin(theta),
+               0, sin(theta), cos(theta);
+    return yowRot;
+}
+
+Matrix3d* DCMPlanner::yawRotGen(){
+    yawRotation_ = new Matrix3d[int ((stepCount_*tStep_)/dt_)];
+    double ini_theta;
+    double end_theta;
+    
+    for (int i=1; i<stepCount_-1; i++){
+        ini_theta = ((i-1)*theta_ + i*theta_)/2;
+        end_theta = (i*theta_ + (i+1)*theta_)/2;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        for (int j=0; j<tStep_/dt_; j++){
+            double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+            yawRotation_[int((i-1)*tStep_/dt_ + j)] = DCMPlanner::yawRotMat(theta_traj);
+        }
+    }
+    for (int j=0; j<tStep_/dt_; j++){
+        ini_theta = 0.0;
+        end_theta = theta_/2;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+        yawRotation_[j] = DCMPlanner::yawRotMat(theta_traj);
+    }
+    for (int j=0; j<tStep_/dt_; j++){
+        ini_theta = ((stepCount_-2)*theta_ + (stepCount_-1)*theta_)/2;
+        end_theta = (stepCount_-1)*theta_;
+        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
+        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
+        yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)] = DCMPlanner::yawRotMat(theta_traj);
+    }
+    return yawRotation_;
+}
 
 DCMPlanner::~DCMPlanner(){
     delete[] rF_;
@@ -191,4 +232,5 @@ DCMPlanner::~DCMPlanner(){
     delete[] xiDSE_;
     delete[] COM_;
     delete[] ZMP_;
+    delete[] yawRotation_;
 }
