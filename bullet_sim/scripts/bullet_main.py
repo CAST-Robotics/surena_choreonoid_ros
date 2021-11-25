@@ -51,41 +51,41 @@ class robot_sim:
 
         rospy.wait_for_service("/general_traj")
         general_motion_handle = rospy.ServiceProxy("/general_traj", GeneralTraj)
-        init_com_pos = [0, 0, 0.71]
+        init_com_pos = [0, 0, 0.73]
         init_com_orient = [0, 0, 0]  
         final_com_pos = [0, 0, 0.68]
         final_com_orient = [0, 0, 0]
-        init_lankle_pos = [0, 0.1, 0]
+        init_lankle_pos = [0, 0.115, 0]
         init_lankle_orient = [0, 0, 0]
-        final_lankle_pos = [0, 0.1, 0]
+        final_lankle_pos = [0, 0.115, 0]
         final_lankle_orient = [0, 0, 0]
-        init_rankle_pos = [0, -0.1, 0]
+        init_rankle_pos = [0, -0.115, 0]
         init_rankle_orient = [0, 0, 0]
-        final_rankle_pos = [0, -0.1, 0]
+        final_rankle_pos = [0, -0.115, 0]
         final_rankle_orient = [0, 0, 0]
-        done = general_motion_handle(init_com_pos,init_lankle_orient,final_com_pos,final_com_orient,
+        init_motion_time = 2.0
+        done = general_motion_handle(init_com_pos,init_com_orient,final_com_pos,final_com_orient,
                     init_lankle_pos,init_rankle_orient,final_lankle_pos,final_lankle_orient,
-                    init_rankle_pos,init_rankle_orient,final_rankle_pos,final_rankle_orient, 2.0, 1 / self.freq)
+                    init_rankle_pos,init_rankle_orient,final_rankle_pos,final_rankle_orient, init_motion_time, 1 / self.freq)
         
         while (not done):
             print("General Motion Failed, calling again...")
             done = general_motion_handle(init_com_pos,init_lankle_orient,final_com_pos,final_com_orient,
                     init_lankle_pos,init_rankle_orient,final_lankle_pos,final_lankle_orient,
-                    init_rankle_pos,init_rankle_orient,final_rankle_pos,final_rankle_orient, 2.0, 1 / self.freq)
+                    init_rankle_pos,init_rankle_orient,final_rankle_pos,final_rankle_orient, init_motion_time, 1 / self.freq)
 
         alpha = 0.44
         t_ds = 0.1
         t_step = 1.0
-        step_length = 0.5 / 3.6 * 1
-        step_width = -0.05
+        step_length = 0.15
+        step_width = 0.0
         CoM_height = 0.68
-        step_count = 4
+        step_count = 7
         ankle_height = 0.025
-        theta = 0.0
+        theta = 0.2
         rospy.wait_for_service("/traj_gen")
 
         trajectory_handle = rospy.ServiceProxy("/traj_gen", Trajectory)
-        size = int(((step_count + 2) * t_step + 1) * self.freq)
 
         done = trajectory_handle(alpha,t_ds,t_step,step_length,step_width,CoM_height,
                                          step_count, ankle_height, 1 / self.freq, theta)
@@ -97,6 +97,7 @@ class robot_sim:
         if done:
             print("trajectory has been recieved...")
 
+        size = int((init_motion_time + (step_count + 2) * t_step) * self.freq)
         feasible = True
         pre_vel = np.array([0, 0, 0])
         while ((self.iter <= size - 1) and feasible):
@@ -155,7 +156,7 @@ class robot_sim:
         pybullet.resetSimulation()
         self.planeID = pybullet.loadURDF("plane.urdf")
         pybullet.setGravity(0,0,-9.81)
-        os.chdir("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros")
+        os.chdir("/home/amirhosein/Amirhosein/Cast/SurenaProject/Code/Choreonoid_ROS/src/surena_choreonoid_ros")
 
         self.robotID = pybullet.loadURDF("/bullet_sim/surena4.urdf",useFixedBase = 0)
         #self.box = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/box.urdf", [0.6,0.115,0],useFixedBase = 1)
@@ -181,6 +182,6 @@ class robot_sim:
 
 if __name__ == "__main__":
 
-    robot = robot_sim(time = 7.0, robot_vel = 0.8 / 3.6, render=False)
+    robot = robot_sim(time = 7.0, robot_vel = 0.6 / 3.6, render=False)
     robot.run()
     pass

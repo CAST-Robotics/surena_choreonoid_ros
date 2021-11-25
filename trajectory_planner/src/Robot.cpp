@@ -25,9 +25,9 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     
     // SURENA IV geometrical params
     
-    thigh_ = 0.36;  // SR1: 0.3535, Surena4: 0.37, Surena5: 0.36
-    shank_ = 0.35;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
-    torso_ = 0.1;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
+    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37, Surena5: 0.36
+    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
+    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
 
     dataSize_ = 0;
     rSole_ << 0.0, -torso_, 0.0;
@@ -122,12 +122,11 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
         pelvis = cont_out;
     }
-    //cout << CoMRot_[iter] << endl;
-    //cout << "-----------------" << endl;
-    //cout << lAnkleRot_[iter] << endl;
-    //cout << "-----------------" << endl;
-    //cout << rAnkleRot_[iter] << endl;
-    //cout << "-----------------" << endl;
+    cout << CoMRot_[iter].eulerAngles(0, 1, 2)(0) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(1) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
+            lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
+            rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
+    
+    //doIK(pelvis, attitude, lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
     doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
     //doIK(pelvis, attitude, lfoot, attitude, rfoot, attitude);
     for(int i = 0; i < 12; i++)
@@ -395,7 +394,6 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
-    cout << "Hiiii!" << endl;
     if(theta == 0.0){
         int sign;
         if (step_width == 0){sign = 1;}
@@ -406,8 +404,13 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         dcm_rf[0] << 0.0, 0.0, 0.0;
         dcm_rf[1] << 0.0, torso_ * -sign, 0.0;
         for(int i = 2; i <= num_step + 1; i ++){
-            ankle_rf[i] = ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
-            dcm_rf[i] << ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+            if (i == 2 || i == num_step + 1){
+                ankle_rf[i] = ankle_rf[i-2] + Vector3d(step_len, step_width, 0.0);
+                dcm_rf[i] << ankle_rf[i-2] + Vector3d(step_len, step_width, 0.0);
+            }else{
+                ankle_rf[i] = ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+                dcm_rf[i] << ankle_rf[i-2] + Vector3d(2 * step_len, step_width, 0.0);
+            }
         }
         dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
     }  
@@ -423,7 +426,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         }
         for (int i = 1; i < num_step; i++){
             if (theta >= 0){
-                dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;  // pow(-1, i + 1) : for specifing that first swing leg is left leg
+                dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
                 ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
             }
             else {
@@ -441,7 +444,6 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
             ankle_rf[num_step + 1] << ankle_rf[num_step](0) - pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) + pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
         dcm_rf[num_step + 1] << (ankle_rf[num_step + 1](0) + ankle_rf[num_step](0)) / 2, (ankle_rf[num_step + 1](1) + ankle_rf[num_step](1)) / 2, 0.0;
     }
-    cout << "Byeeeee!" << endl;
     trajectoryPlanner->setFoot(dcm_rf);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     zmpd_ = trajectoryPlanner->getZMP();
@@ -488,7 +490,6 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;
-    cout << "dataSize = " << dataSize_ << endl;
 
     FKCoM_ = new Vector3d[dataSize_];
     FKCoMDot_ = new Vector3d[dataSize_];
@@ -556,7 +557,6 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;
-    cout << "dataSize = " << dataSize_ << endl;
     FKCoM_ = new Vector3d[dataSize_];
     FKCoMDot_ = new Vector3d[dataSize_];
     realXi_ = new Vector3d[dataSize_];
@@ -598,7 +598,7 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         ROS_INFO("First call traj_gen service");
         return false;
     }
-
+    
     if (req.iter == size_ - 1 ){ 
         write2File(FKCoM_, size_,"CoM Real");
         write2File(realZMP_, size_, "ZMP Real");

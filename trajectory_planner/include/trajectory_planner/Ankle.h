@@ -31,5 +31,4 @@ class Ankle: private MinJerk{
         Matrix3d* rFootRot_;
        
         void updateTrajectory(bool left_first);
-        Matrix3d yawRotMat(double theta);
 };
