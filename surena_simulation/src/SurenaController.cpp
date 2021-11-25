@@ -64,45 +64,45 @@ public:
     virtual bool initialize(SimpleControllerIO* io) override
     {
         dt = io->timeStep();
-        
-        //DCM Walk
-        ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
-        trajectory_planner::Trajectory traj;
-
-        traj.request.step_width = -0.05;
-        traj.request.alpha = 0.44;
-        traj.request.t_double_support = 0.1;
-        traj.request.t_step = 1;
-        traj.request.step_length = 0.5 / 3.6 * 1;
-        traj.request.COM_height = 0.68;
-        traj.request.step_count = 4;
-        traj.request.ankle_height = 0.025;
-        traj.request.theta = 0;
-        traj.request.dt = dt;
-        //cout<<"adeawewa"<<endl;
-        size_ = int(((traj.request.step_count + 2) * traj.request.t_step) / traj.request.dt);
-        result = traj.response.result;
-        
         // General Motion
         ros::ServiceClient gen_client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
         trajectory_planner::GeneralTraj general_traj;
-        general_traj.request.init_com_pos = {0, 0, 0.71};
+        general_traj.request.init_com_pos = {0, 0, 0.73};
         general_traj.request.init_com_orient = {0, 0, 0};
         general_traj.request.final_com_pos = {0, 0, 0.68};
         general_traj.request.final_com_orient = {0, 0, 0};
 
-        general_traj.request.init_lankle_pos = {0, 0.1, 0};
+        general_traj.request.init_lankle_pos = {0, 0.115, 0};
         general_traj.request.init_lankle_orient = {0, 0, 0};
-        general_traj.request.final_lankle_pos = {0, 0.1, 0};
+        general_traj.request.final_lankle_pos = {0, 0.115, 0};
         general_traj.request.final_lankle_orient = {0, 0, 0};
 
-        general_traj.request.init_rankle_pos = {0, -0.1, 0};
+        general_traj.request.init_rankle_pos = {0, -0.115, 0};
         general_traj.request.init_rankle_orient = {0, 0, 0};
-        general_traj.request.final_rankle_pos = {0, -0.1, 0};
+        general_traj.request.final_rankle_pos = {0, -0.115, 0};
         general_traj.request.final_rankle_orient = {0, 0, 0};
 
         general_traj.request.time = 2;
         general_traj.request.dt = dt;
+
+        //DCM Walk
+        ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
+        trajectory_planner::Trajectory traj;
+
+        traj.request.step_width = 0.2;
+        traj.request.alpha = 0.44;
+        traj.request.t_double_support = 0.1;
+        traj.request.t_step = 1;
+        traj.request.step_length = 0.0;
+        traj.request.COM_height = 0.68;
+        traj.request.step_count = 4;
+        traj.request.ankle_height = 0.025;
+        traj.request.theta = 0.0;
+        traj.request.dt = dt;
+        result = traj.response.result;
+        
+        size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
+
         result = true;
 
         gen_client.call(general_traj);
@@ -119,7 +119,8 @@ public:
         io->enableInput(rightForceSensor);
         accelSensor = ioBody->findDevice<AccelerationSensor>("WaistAccelSensor");
         io->enableInput(accelSensor);
-        gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro");
+        //gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro"); //SR1
+        gyro = ioBody->findDevice<RateGyroSensor>("gyrometer"); //SurenaIV
         io->enableInput(gyro);
 
         for(int i=0; i < ioBody->numJoints(); ++i){
@@ -154,8 +155,8 @@ public:
         }
 
         for (int j=0; j<12; j++){
-            jntangs.request.config[j] = cur_q[sr1Index_[j]];
-            jntangs.request.jnt_vel[j] = (cur_q[sr1Index_[j]] - qold[sr1Index_[j]]) / dt;
+            jntangs.request.config[j] = cur_q[surenaIndex_[j]];
+            jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
             }
         jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
         jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
@@ -165,7 +166,7 @@ public:
             jnt_client.call(jntangs);
 
             for (int j=0; j<12; j++)
-                qref[sr1Index_[j]] = jntangs.response.jnt_angs[j];
+                qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
                 
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);

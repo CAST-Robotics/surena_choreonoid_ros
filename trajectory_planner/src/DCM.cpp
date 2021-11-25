@@ -183,41 +183,33 @@ Vector3d* DCMPlanner::getZMP(){
     MinJerk::write2File(ZMP_, length, "ZMP");
     return ZMP_;
 }
-Matrix3d DCMPlanner::yawRotMat(double theta){
-    Matrix3d yowRot;
-    yowRot  << 1, 0, 0,
-               0, cos(theta), -sin(theta),
-               0, sin(theta), cos(theta);
-    return yowRot;
-}
 
 Matrix3d* DCMPlanner::yawRotGen(){
     yawRotation_ = new Matrix3d[int ((stepCount_*tStep_)/dt_)];
     double ini_theta;
     double end_theta;
-    
-    for (int i=1; i<stepCount_-1; i++){
-        ini_theta = ((i-1)*theta_ + i*theta_)/2;
-        end_theta = (i*theta_ + (i+1)*theta_)/2;
+
+    for (int j=0; j<tStep_/dt_; j++)
+        yawRotation_[j] = AngleAxisd(0, Vector3d::UnitZ());
+
+    for (int i=1; i<stepCount_ - 1; i++){
+        ini_theta = ((i-1)*theta_ + (i-2)*theta_)/2;
+        end_theta = ((i-1)*theta_ + i*theta_)/2;
+
+        if (i==1)
+            ini_theta = 0;
+        if (i==stepCount_ - 2)
+            end_theta = (stepCount_ - 3) * theta_;
         double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
         for (int j=0; j<tStep_/dt_; j++){
             double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
-            yawRotation_[int((i-1)*tStep_/dt_ + j)] = DCMPlanner::yawRotMat(theta_traj);
+            yawRotation_[int((i)*tStep_/dt_ + j)] = AngleAxisd(theta_traj, Vector3d::UnitZ());
         }
     }
+    
     for (int j=0; j<tStep_/dt_; j++){
-        ini_theta = 0.0;
-        end_theta = theta_/2;
-        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
-        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
-        yawRotation_[j] = DCMPlanner::yawRotMat(theta_traj);
-    }
-    for (int j=0; j<tStep_/dt_; j++){
-        ini_theta = ((stepCount_-2)*theta_ + (stepCount_-1)*theta_)/2;
-        end_theta = (stepCount_-1)*theta_;
-        double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
-        double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);
-        yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)] = DCMPlanner::yawRotMat(theta_traj);
+        
+        yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)] = yawRotation_[int((stepCount_-1) * tStep_/dt_ +  j)-1];
     }
     return yawRotation_;
 }
