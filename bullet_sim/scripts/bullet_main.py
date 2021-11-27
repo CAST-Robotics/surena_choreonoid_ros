@@ -77,12 +77,12 @@ class robot_sim:
         alpha = 0.44
         t_ds = 0.1
         t_step = 1.0
-        step_length = 0.15
+        step_length = -0.1
         step_width = 0.0
         CoM_height = 0.68
-        step_count = 7
+        step_count = 10
         ankle_height = 0.025
-        theta = 0.2
+        theta = 0.15
         rospy.wait_for_service("/traj_gen")
 
         trajectory_handle = rospy.ServiceProxy("/traj_gen", Trajectory)
@@ -156,7 +156,7 @@ class robot_sim:
         pybullet.resetSimulation()
         self.planeID = pybullet.loadURDF("plane.urdf")
         pybullet.setGravity(0,0,-9.81)
-        os.chdir("/home/amirhosein/Amirhosein/Cast/SurenaProject/Code/Choreonoid_ROS/src/surena_choreonoid_ros")
+        os.chdir("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros")
 
         self.robotID = pybullet.loadURDF("/bullet_sim/surena4.urdf",useFixedBase = 0)
         #self.box = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/box.urdf", [0.6,0.115,0],useFixedBase = 1)

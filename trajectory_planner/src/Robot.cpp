@@ -122,9 +122,9 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
         pelvis = cont_out;
     }
-    cout << CoMRot_[iter].eulerAngles(0, 1, 2)(0) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(1) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
-            lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
-            rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
+    //cout << CoMRot_[iter].eulerAngles(0, 1, 2)(0) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(1) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
+    //        lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
+    //        rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
     
     //doIK(pelvis, attitude, lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
     doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
@@ -394,7 +394,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
-    if(theta == 0.0){
+    if(theta == 0.0){   // Straight or Diagonal Walk
         int sign;
         if (step_width == 0){sign = 1;}
         else{sign = (step_width/abs(step_width));}
@@ -415,34 +415,51 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
     }  
 
-    else{
-        if (theta > 0){
-            dcm_rf[1] << 0.0, -torso_, 0.0;
-            ankle_rf[1] << 0.0, -torso_, 0.0;
+    else{   //Turning Walk
+        double r = abs(step_len/theta);
+        int sign = abs(step_len) / step_len;
+        cout << sign << endl;
+        ankle_rf[0] = Vector3d(0.0, -sign * torso_, 0.0);
+        dcm_rf[0] = Vector3d::Zero(3);
+        ankle_rf[num_step + 1] = (r + pow(-1, num_step) * torso_) * Vector3d(sin(theta * (num_step-1)), sign * cos(theta * (num_step-1)), 0.0) + 
+                                    Vector3d(0.0, -sign * r, 0.0);
+        cout << ankle_rf[0](0) << "," << ankle_rf[0](1) << "," << ankle_rf[0](2) << endl;
+        for (int i = 1; i <= num_step; i ++){
+            ankle_rf[i] = (r + pow(-1, i-1) * torso_) * Vector3d(sin(theta * (i-1)), sign * cos(theta * (i-1)), 0.0) + 
+                                    Vector3d(0.0, -sign * r, 0.0);
+            dcm_rf[i] = ankle_rf[i];
+            cout << dcm_rf[i](0) << "," << dcm_rf[i](1) << "," << dcm_rf[i](2) << endl ;
         }
-        else{
-            dcm_rf[1] << 0.0, torso_, 0.0;
-            ankle_rf[1] << 0.0, torso_, 0.0;  
-        }
-        for (int i = 1; i < num_step; i++){
-            if (theta >= 0){
-                dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
-                ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
-            }
-            else {
-                dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
-                ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
-            }
-        }
+        dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
+        cout << ankle_rf[num_step + 1](0) << "," << ankle_rf[num_step + 1](1) << "," << ankle_rf[num_step + 1](2) << endl ;
 
-        double final_theta = (num_step - 1) * theta;
-        dcm_rf[0] << 0.0, 0.0, 0.0;
-        ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
-        if (theta >= 0)
-            ankle_rf[num_step + 1] << ankle_rf[num_step](0) + pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) - pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
-        else
-            ankle_rf[num_step + 1] << ankle_rf[num_step](0) - pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) + pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
-        dcm_rf[num_step + 1] << (ankle_rf[num_step + 1](0) + ankle_rf[num_step](0)) / 2, (ankle_rf[num_step + 1](1) + ankle_rf[num_step](1)) / 2, 0.0;
+        //if (theta > 0){
+        //    dcm_rf[1] << 0.0, -torso_, 0.0;
+        //    ankle_rf[1] << 0.0, -torso_, 0.0;
+        //}
+        //else{
+        //    dcm_rf[1] << 0.0, torso_, 0.0;
+        //    ankle_rf[1] << 0.0, torso_, 0.0;  
+        //}
+        //for (int i = 1; i < num_step; i++){
+        //    if (theta >= 0){
+        //        dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        //        ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len - sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) + cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        //    }
+        //    else {
+        //        dcm_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        //        ankle_rf[i+1] << dcm_rf[i](0) + cos(i * theta) * step_len + sin(i * theta) * pow(-1, i + 1) * torso_ , sin(i * theta) * (step_len) - cos(i * theta) * pow(-1, i + 1) * torso_, 0.0;
+        //    }
+        //}
+
+        //double final_theta = (num_step - 1) * theta;
+        //dcm_rf[0] << 0.0, 0.0, 0.0;
+        //ankle_rf[0] << 0.0, -ankle_rf[1](1), 0.0;
+        //if (theta >= 0)
+        //    ankle_rf[num_step + 1] << ankle_rf[num_step](0) + pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) - pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
+        //else
+        //    ankle_rf[num_step + 1] << ankle_rf[num_step](0) - pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) + pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
+        //dcm_rf[num_step + 1] << (ankle_rf[num_step + 1](0) + ankle_rf[num_step](0)) / 2, (ankle_rf[num_step + 1](1) + ankle_rf[num_step](1)) / 2, 0.0;
     }
     trajectoryPlanner->setFoot(dcm_rf);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
