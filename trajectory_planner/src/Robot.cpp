@@ -22,6 +22,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::jntAngsCallback, this);
     generalTrajServer_ = nh->advertiseService("/general_traj", 
             &Robot::generalTrajCallback, this);
+    resetTrajServer_ = nh->advertiseService("/reset_traj",
+            &Robot::resetTrajCallback, this);
     
     // SURENA IV geometrical params
     
@@ -608,6 +610,22 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(lSoles_, size_, "Left Sole");
     }
     //ROS_INFO("joint angles returned");
+    return true;
+}
+
+bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
+                              std_srvs::Empty::Response &res)
+{
+    delete[] CoMPos_;
+    delete[] lAnklePos_;
+    delete[] rAnklePos_;
+    delete[] CoMRot_;
+    delete[] lAnkleRot_;
+    delete[] rAnkleRot_;
+    trajSizes_.clear();
+    trajContFlags_.clear();
+    dataSize_ = 0;
+
     return true;
 }
 
