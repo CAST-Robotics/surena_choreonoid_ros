@@ -156,7 +156,7 @@ class robot_sim:
         pybullet.resetSimulation()
         self.planeID = pybullet.loadURDF("plane.urdf")
         pybullet.setGravity(0,0,-9.81)
-        os.chdir("/home/amirhosein/Amirhosein/Cast/SurenaProject/Code/Choreonoid_ROS/src/surena_choreonoid_ros")
+        os.chdir("/home/surena/DynCont/Choreonoid_ROS/src/surena_choreonoid_ros")
 
         self.robotID = pybullet.loadURDF("/bullet_sim/surena4.urdf",useFixedBase = 0)
         #self.box = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/box.urdf", [0.6,0.115,0],useFixedBase = 1)

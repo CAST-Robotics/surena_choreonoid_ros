@@ -2,6 +2,7 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <std_srvs/Empty.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/GeneralTraj.h"
@@ -32,6 +33,8 @@ class Robot{
                             trajectory_planner::Trajectory::Response &res);
         bool generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
                                 trajectory_planner::GeneralTraj::Response &res);
+        bool resetTrajCallback(std_srvs::Empty::Request  &req,
+                              std_srvs::Empty::Response &res);
 
         int findTrajIndex(vector<int> arr, int n, int K);
     private:
@@ -104,6 +107,7 @@ class Robot{
         ros::ServiceServer jntAngsServer_;
         ros::ServiceServer trajGenServer_;
         ros::ServiceServer generalTrajServer_;
+        ros::ServiceServer resetTrajServer_;
         bool isTrajAvailable_;
         bool useController_;
 
