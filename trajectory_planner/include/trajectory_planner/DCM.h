@@ -27,7 +27,7 @@ class DCMPlanner: private MinJerk{
     public:
         DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime, double dt, int stepCount = 6, double alpha = 0.5, double theta = 0.0);
         ~DCMPlanner();
-        void setFoot(Vector3d rF[]);
+        void setFoot(Vector3d rF[], int sign);
         Vector3d* getXiTrajectory();
         Vector3d* getXiDot();
         Vector3d* getCoM();
@@ -59,6 +59,7 @@ class DCMPlanner: private MinJerk{
         Vector3d* xiDSI_;
         Vector3d* xiDSE_;
         Matrix3d* yawRotation_;
+        int yawSign_;
         // Functions for generating trajectories
         void updateVRP();
         void updateSS();
