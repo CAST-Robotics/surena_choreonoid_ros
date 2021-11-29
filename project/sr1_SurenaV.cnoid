@@ -19,7 +19,6 @@ items:
           name: "AISTSimulator"
           plugin: Body
           class: AISTSimulatorItem
-          is_selected: true
           data: 
             timeStep: 0.001
             realtimeSync: true
@@ -79,7 +78,7 @@ items:
           class: BodyItem
           is_checked: true
           data: 
-            file: "../../choreonoid/share/model/SR1/SR1_SurenaV.body"
+            file: "SR1_SurenaV.body"
             format: CHOREONOID-BODY
             rootPosition: [ 0, 0, 0.77 ]
             rootAttitude: [ 
@@ -123,29 +122,11 @@ items:
               data: 
                 isNoDelayMode: false
                 controllerOptions: ""
-                controller: "../../../build/surena_simulation/lib/choreonoid-1.8/simplecontroller/SurenaController"
+                controller: "${HOME}/CAST/choreonoid_ws/build/surena_simulation/lib/choreonoid-1.8/simplecontroller/SurenaController"
                 baseDirectory: "None"
                 reloading: false
                 exportSymbols: false
                 isOldTargetVariableMode: false
-            - 
-              id: 6
-              name: "SensorVisualizer"
-              plugin: Body
-              class: SensorVisualizerItem
-              data: 
-                sub_items: 
-                  - 
-                    class: ForceSensorVisualizerItem
-                    name: ForceSensor
-                    is_checked: true
-                    visualRatio: 0.002
-                  - 
-                    class: CameraImageVisualizerItem
-                    name: LeftCamera
-                  - 
-                    class: CameraImageVisualizerItem
-                    name: RightCamera
 views: 
   - 
     id: 0
@@ -158,7 +139,7 @@ views:
     class: ItemTreeView
     mounted: true
     state: 
-      expanded: [ 1, 4, 5, 6 ]
+      expanded: [ 1, 4 ]
   - 
     id: 2
     name: "Location"
@@ -390,17 +371,17 @@ viewAreas:
     contents: 
       type: splitter
       orientation: horizontal
-      sizes: [ 992, 316 ]
+      sizes: [ 1582, 504 ]
       children: 
         - 
           type: splitter
           orientation: horizontal
-          sizes: [ 256, 732 ]
+          sizes: [ 408, 1166 ]
           children: 
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 305, 305 ]
+              sizes: [ 551, 550 ]
               children: 
                 - 
                   type: pane
@@ -412,7 +393,7 @@ viewAreas:
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 457, 153 ]
+              sizes: [ 825, 276 ]
               children: 
                 - 
                   type: pane
@@ -424,7 +405,7 @@ viewAreas:
         - 
           type: splitter
           orientation: vertical
-          sizes: [ 186, 424 ]
+          sizes: [ 346, 755 ]
           children: 
             - 
               type: pane
@@ -432,7 +413,7 @@ viewAreas:
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 266, 154 ]
+              sizes: [ 497, 250 ]
               children: 
                 - 
                   type: pane

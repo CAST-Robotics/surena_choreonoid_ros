@@ -22,6 +22,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::jntAngsCallback, this);
     generalTrajServer_ = nh->advertiseService("/general_traj", 
             &Robot::generalTrajCallback, this);
+    resetTrajServer_ = nh->advertiseService("/reset_traj",
+            &Robot::resetTrajCallback, this);
     
     // SURENA IV geometrical params
     
@@ -394,6 +396,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
+    int sign;
     if(theta == 0.0){   // Straight or Diagonal Walk
         int sign;
         if (step_width == 0){sign = 1;}
@@ -417,7 +420,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
 
     else{   //Turning Walk
         double r = abs(step_len/theta);
-        int sign = abs(step_len) / step_len;
+        sign = abs(step_len) / step_len;
         cout << sign << endl;
         ankle_rf[0] = Vector3d(0.0, -sign * torso_, 0.0);
         dcm_rf[0] = Vector3d::Zero(3);
@@ -461,13 +464,13 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         //    ankle_rf[num_step + 1] << ankle_rf[num_step](0) - pow(-1, num_step) * 2 * torso_ * sin(final_theta), ankle_rf[num_step](1) + pow(-1, num_step) * 2 * torso_ * cos(final_theta), 0.0;
         //dcm_rf[num_step + 1] << (ankle_rf[num_step + 1](0) + ankle_rf[num_step](0)) / 2, (ankle_rf[num_step + 1](1) + ankle_rf[num_step](1)) / 2, 0.0;
     }
-    trajectoryPlanner->setFoot(dcm_rf);
+    trajectoryPlanner->setFoot(dcm_rf, -sign);
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     zmpd_ = trajectoryPlanner->getZMP();
     xiDot_ = trajectoryPlanner->getXiDot();
     CoMDot_ = trajectoryPlanner->get_CoMDot();
     delete[] dcm_rf;
-    anklePlanner->updateFoot(ankle_rf);
+    anklePlanner->updateFoot(ankle_rf, -sign);
     anklePlanner->generateTrajectory();
     delete[] ankle_rf;
     onlineWalk_.setDt(req.dt);
@@ -625,6 +628,22 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         write2File(lSoles_, size_, "Left Sole");
     }
     //ROS_INFO("joint angles returned");
+    return true;
+}
+
+bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
+                              std_srvs::Empty::Response &res)
+{
+    delete[] CoMPos_;
+    delete[] lAnklePos_;
+    delete[] rAnklePos_;
+    delete[] CoMRot_;
+    delete[] lAnkleRot_;
+    delete[] rAnkleRot_;
+    trajSizes_.clear();
+    trajContFlags_.clear();
+    dataSize_ = 0;
+
     return true;
 }
 

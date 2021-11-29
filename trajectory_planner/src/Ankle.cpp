@@ -8,11 +8,12 @@ Ankle::Ankle(double step_time, double ds_time, double height, double alpha, shor
     this->height_ = height;
     this->dt_ = dt;
     this->theta_ = theta;
+    this->yawSign_ = 1;
 
     //cout << "ankle Trajectory Planner initialized\n";
 }
 
-void Ankle::updateFoot(Vector3d foot_pose[]){
+void Ankle::updateFoot(Vector3d foot_pose[], int sign){
     /*
         begining and end steps (Not included in DCM foot planner)
         should be given too. 
@@ -23,6 +24,7 @@ void Ankle::updateFoot(Vector3d foot_pose[]){
         leftFirst_= true;   // First Swing foot is left foot
     else
         leftFirst_ = false;  // First Swing foot is right foot
+    this->yawSign_ = sign;
 }
 
 Vector3d* Ankle::getTrajectoryL(){
@@ -79,12 +81,12 @@ void Ankle::updateTrajectory(bool left_first){
 
     if (left_first){
         for (int step = 1; step < stepCount_ + 1 ; step ++){
-            double theta_ini = (step-2)*theta_;
-            double theta_end = (step)*theta_;
+            double theta_ini = (step-2)*theta_*yawSign_;
+            double theta_end = (step)*theta_*yawSign_;
             if (step == 1)
                 theta_ini = 0;
             if (step == stepCount_)
-                theta_end = (step-1)*theta_;
+                theta_end = (step-1)*theta_*yawSign_;
             if (step % 2 == 0){     // Left is support, Right swings
                 for (double time = 0; time < (1 - alpha_) * tDS_; time += dt_){
                     lFoot_[index] = footPose_[step];
@@ -141,12 +143,12 @@ void Ankle::updateTrajectory(bool left_first){
     else{       // Right Foot Swings first
         for (int step = 1; step < stepCount_ + 1 ; step ++){
 
-            double theta_ini = (step-2)*theta_;
-            double theta_end = (step)*theta_;
+            double theta_ini = (step-2)*theta_*yawSign_;
+            double theta_end = (step)*theta_*yawSign_;
             if (step == 1)
                 theta_ini = 0;
             if (step == stepCount_)
-                theta_end = (step-1)*theta_;
+                theta_end = (step-1)*theta_*yawSign_;
             
             if (step % 2 != 0){     // Left is support, Right swings
                 for (double time = 0; time < (1 - alpha_) * tDS_; time += dt_){

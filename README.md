@@ -11,7 +11,7 @@
   * Build all packages `catkin build`
   * Run Ros master `roscore`
   * Run Trajectory Planner Node `rosrun trajectory_planner trajectory_planner`
-  * Open Choreonoid `rosrun choreonoid choreonoid_ros choreonoid`
+  * Open Choreonoid `rosrun choreonoid_ros choreonoid`
   * Load project file surenaiv.wrl
   * Start AISTSimulator
 ---

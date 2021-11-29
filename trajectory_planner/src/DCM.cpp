@@ -11,12 +11,14 @@ DCMPlanner::DCMPlanner(double deltaZ, double stepTime, double doubleSupportTime,
         throw "Invalid Value for alpha";
     this->dt_ = dt;
     this->stepCount_ = stepCount;
+    this->yawSign_ = 1;
     //cout << "DCMPlanner Object created" << endl;
 }
 
-void DCMPlanner::setFoot(Vector3d rF[]){
+void DCMPlanner::setFoot(Vector3d rF[], int sign){
     rF_ = new Vector3d[stepCount_];
     rF_ = rF;
+    this->yawSign_ = sign;
 }
 
 Vector3d* DCMPlanner::getXiDot(){
@@ -193,13 +195,13 @@ Matrix3d* DCMPlanner::yawRotGen(){
         yawRotation_[j] = AngleAxisd(0, Vector3d::UnitZ());
 
     for (int i=1; i<stepCount_ - 1; i++){
-        ini_theta = ((i-1)*theta_ + (i-2)*theta_)/2;
-        end_theta = ((i-1)*theta_ + i*theta_)/2;
+        ini_theta = this->yawSign_ * ((i-1)*theta_ + (i-2)*theta_)/2;//
+        end_theta = this->yawSign_ * ((i-1)*theta_ + i*theta_)/2;//
 
         if (i==1)
             ini_theta = 0;
         if (i==stepCount_ - 2)
-            end_theta = (stepCount_ - 3) * theta_;
+            end_theta = this->yawSign_ * (stepCount_ - 3) * theta_;//
         double* coef = MinJerk::cubicInterpolate<double>(ini_theta, end_theta, 0, 0, tStep_);
         for (int j=0; j<tStep_/dt_; j++){
             double theta_traj = coef[0] + coef[1] * j*dt_ + coef[2] * pow(j*dt_,2) + coef[3] * pow(j*dt_,3);

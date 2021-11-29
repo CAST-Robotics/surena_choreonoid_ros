@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  std_srvs
   message_generation
   choreonoid
 )
@@ -74,6 +75,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  std_srvs
 )
 
 ################################################
