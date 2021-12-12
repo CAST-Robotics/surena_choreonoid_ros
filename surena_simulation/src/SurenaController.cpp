@@ -6,10 +6,12 @@
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/GeneralTraj.h"
+#include "std_srvs/Empty.h"
 
 using namespace std;
 using namespace cnoid;
 using namespace Eigen;
+//SR1
 /*
 const double pgain[] = {
     8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
@@ -53,13 +55,6 @@ class SurenaController : public SimpleController{
     int size_;
 
 public:
-    virtual bool configure(SimpleControllerConfig* config) override
-    {
-        //config->sigChanged().connect();
-        return true;
-    }
-
-
 
     virtual bool initialize(SimpleControllerIO* io) override
     {
@@ -91,13 +86,13 @@ public:
 
         traj.request.step_width = 0.0;
         traj.request.alpha = 0.44;
-        traj.request.t_double_support = 0.1;
+        traj.request.t_double_support = 0.15;
         traj.request.t_step = 1;
-        traj.request.step_length = 0.1;
+        traj.request.step_length = -0.1;
         traj.request.COM_height = 0.68;
-        traj.request.step_count = 10;
+        traj.request.step_count = 4;
         traj.request.ankle_height = 0.025;
-        traj.request.theta = 0.1;
+        traj.request.theta = 0.0;
         traj.request.dt = dt;
         result = traj.response.result;
         
@@ -107,10 +102,6 @@ public:
 
         gen_client.call(general_traj);
         client.call(traj);
-        size_ = 8000;
-        //cout << "client called" << endl;
-        //size_ = general_traj.response.duration;
-        //cout << "size = " << size_ << endl;
         
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
@@ -127,47 +118,61 @@ public:
             Link* joint = ioBody->joint(i);
             joint->setActuationMode(Link::JOINT_TORQUE);
             io->enableIO(joint);
-            //qref.push_back(joint->q());
             qref[i] = joint->q();
             qold[i] = qref[i];
             
         }
-       // qold = qref;
         return true;
     }
     virtual bool control() override
     {
         ros::ServiceClient jnt_client = nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
-        
-        jntangs.request.left_ft = {float(leftForceSensor->f().z()),
-                                   float(leftForceSensor->tau().x()),
-                                   float(leftForceSensor->tau().y())};
-        jntangs.request.right_ft = {float(rightForceSensor->f().z()),
-                                   float(rightForceSensor->tau().x()),
-                                   float(rightForceSensor->tau().y())};
-                                   
-        jntangs.request.iter = idx;
-        double cur_q[ioBody->numJoints()];
-        for(int i=0; i < ioBody->numJoints(); ++i){
-                Link* joint = ioBody->joint(i);
-                cur_q[i] = joint->q();
-        }
-
-        for (int j=0; j<12; j++){
-            jntangs.request.config[j] = cur_q[surenaIndex_[j]];
-            jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
+        if (idx < size_ - 1){
+            jntangs.request.left_ft = {float(leftForceSensor->f().z()),
+                                    float(leftForceSensor->tau().x()),
+                                    float(leftForceSensor->tau().y())};
+            jntangs.request.right_ft = {float(rightForceSensor->f().z()),
+                                    float(rightForceSensor->tau().x()),
+                                    float(rightForceSensor->tau().y())};
+                                    
+            jntangs.request.iter = idx;
+            double cur_q[ioBody->numJoints()];
+            for(int i=0; i < ioBody->numJoints(); ++i){
+                    Link* joint = ioBody->joint(i);
+                    cur_q[i] = joint->q();
             }
-        jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
-        jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
 
-        if (result){
+            for (int j=0; j<12; j++){
+                jntangs.request.config[j] = cur_q[surenaIndex_[j]];
+                jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
+                }
+            jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
+            jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
 
-            jnt_client.call(jntangs);
+            if (result){
 
-            for (int j=0; j<12; j++)
-                qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
-                
+                jnt_client.call(jntangs);
+
+                for (int j=0; j<12; j++)
+                    qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
+                    
+                for(int i=0; i < ioBody->numJoints(); ++i){
+                    Link* joint = ioBody->joint(i);
+                    double q = joint->q();
+                    double dq = (q - qold[i]) / dt;
+                    double u = (qref[i] - q) * pgain[i] + (0.0 - dq) * dgain[i];
+                    qold[i] = q;
+                    joint->u() = u;
+                }
+            }
+            idx ++;
+        }else{
+            if(idx == size_ - 1){
+                ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Empty>("/reset_traj");
+                std_srvs::Empty srv;
+                reset_client.call(srv);
+            }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);
                 double q = joint->q();
@@ -176,9 +181,6 @@ public:
                 qold[i] = q;
                 joint->u() = u;
             }
-        }
-        //cout << "idx: " << idx << endl;
-        if (idx < size_ - 1){
             idx ++;
         }
         return true;

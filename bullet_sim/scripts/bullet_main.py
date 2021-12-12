@@ -11,6 +11,7 @@ import rospy
 
 from trajectory_planner.srv import JntAngs, Trajectory, GeneralTraj
 from bullet_sim.srv import Walk, WalkResponse
+from std_srvs.srv import Empty
 import math
 import os
 
@@ -80,11 +81,10 @@ class robot_sim:
         step_length = -0.1
         step_width = 0.0
         CoM_height = 0.68
-        step_count = 10
+        step_count = 6
         ankle_height = 0.025
         theta = 0.15
         rospy.wait_for_service("/traj_gen")
-
         trajectory_handle = rospy.ServiceProxy("/traj_gen", Trajectory)
 
         done = trajectory_handle(alpha,t_ds,t_step,step_length,step_width,CoM_height,
@@ -148,6 +148,9 @@ class robot_sim:
                                             flags=pybullet.LINK_FRAME)
                 '''
             self.iter += 1
+        rospy.wait_for_service("/reset_traj")
+        reset_trajectory_handle = rospy.ServiceProxy("/reset_traj", Empty)
+        reset_trajectory_handle()
 
     
     def reset(self):
@@ -156,9 +159,9 @@ class robot_sim:
         pybullet.resetSimulation()
         self.planeID = pybullet.loadURDF("plane.urdf")
         pybullet.setGravity(0,0,-9.81)
-        os.chdir("/home/surena/DynCont/Choreonoid_ROS/src/surena_choreonoid_ros")
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-        self.robotID = pybullet.loadURDF("/bullet_sim/surena4.urdf",useFixedBase = 0)
+        self.robotID = pybullet.loadURDF("../surena4.urdf",useFixedBase = 0)
         #self.box = pybullet.loadURDF("src/surena_choreonoid_ros/bullet_sim/box.urdf", [0.6,0.115,0],useFixedBase = 1)
         if self.real_time:
             pybullet.setRealTimeSimulation(1)

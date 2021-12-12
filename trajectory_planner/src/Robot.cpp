@@ -421,20 +421,20 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     else{   //Turning Walk
         double r = abs(step_len/theta);
         sign = abs(step_len) / step_len;
-        cout << sign << endl;
+        //cout << sign << endl;
         ankle_rf[0] = Vector3d(0.0, -sign * torso_, 0.0);
         dcm_rf[0] = Vector3d::Zero(3);
         ankle_rf[num_step + 1] = (r + pow(-1, num_step) * torso_) * Vector3d(sin(theta * (num_step-1)), sign * cos(theta * (num_step-1)), 0.0) + 
                                     Vector3d(0.0, -sign * r, 0.0);
-        cout << ankle_rf[0](0) << "," << ankle_rf[0](1) << "," << ankle_rf[0](2) << endl;
+        //cout << ankle_rf[0](0) << "," << ankle_rf[0](1) << "," << ankle_rf[0](2) << endl;
         for (int i = 1; i <= num_step; i ++){
             ankle_rf[i] = (r + pow(-1, i-1) * torso_) * Vector3d(sin(theta * (i-1)), sign * cos(theta * (i-1)), 0.0) + 
                                     Vector3d(0.0, -sign * r, 0.0);
             dcm_rf[i] = ankle_rf[i];
-            cout << dcm_rf[i](0) << "," << dcm_rf[i](1) << "," << dcm_rf[i](2) << endl ;
+            //cout << dcm_rf[i](0) << "," << dcm_rf[i](1) << "," << dcm_rf[i](2) << endl ;
         }
         dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
-        cout << ankle_rf[num_step + 1](0) << "," << ankle_rf[num_step + 1](1) << "," << ankle_rf[num_step + 1](2) << endl ;
+        //cout << ankle_rf[num_step + 1](0) << "," << ankle_rf[num_step + 1](1) << "," << ankle_rf[num_step + 1](2) << endl ;
 
         //if (theta > 0){
         //    dcm_rf[1] << 0.0, -torso_, 0.0;
@@ -468,7 +468,6 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     zmpd_ = trajectoryPlanner->getZMP();
     xiDot_ = trajectoryPlanner->getXiDot();
-    CoMDot_ = trajectoryPlanner->get_CoMDot();
     delete[] dcm_rf;
     anklePlanner->updateFoot(ankle_rf, -sign);
     anklePlanner->generateTrajectory();
@@ -505,6 +504,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         lAnkleRot_ = anklePlanner->getRotTrajectoryR();
         rAnkleRot_ = anklePlanner->getRotTrajectoryL();
     }
+    CoMDot_ = trajectoryPlanner->get_CoMDot();
     //ROS_INFO("trajectory generated");
     res.result = true;
     trajSizes_.push_back(dataSize_);
@@ -619,13 +619,13 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         return false;
     }
     
-    if (req.iter == size_ - 1 ){ 
-        write2File(FKCoM_, size_,"CoM Real");
-        write2File(realZMP_, size_, "ZMP Real");
-        write2File(realXi_, size_, "Xi Real");
-        write2File(FKCoMDot_, size_, "CoM Velocity Real");
-        write2File(rSoles_, size_, "Right Sole");
-        write2File(lSoles_, size_, "Left Sole");
+    if (req.iter == dataSize_ - 1 ){ 
+        write2File(FKCoM_, dataSize_,"CoM Real");
+        write2File(realZMP_, dataSize_, "ZMP Real");
+        write2File(realXi_, dataSize_, "Xi Real");
+        write2File(FKCoMDot_, dataSize_, "CoM Velocity Real");
+        write2File(rSoles_, dataSize_, "Right Sole");
+        write2File(lSoles_, dataSize_, "Left Sole");
     }
     //ROS_INFO("joint angles returned");
     return true;
@@ -640,6 +640,14 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
     delete[] CoMRot_;
     delete[] lAnkleRot_;
     delete[] rAnkleRot_;
+
+    delete[] FKCoM_;
+    delete[] FKCoMDot_;
+    delete[] realXi_;
+    delete[] realZMP_;
+    delete[] rSoles_;
+    delete[] lSoles_;
+
     trajSizes_.clear();
     trajContFlags_.clear();
     dataSize_ = 0;
@@ -661,6 +669,8 @@ int main(int argc, char* argv[])
     ki = MatrixXd::Zero(3, 3);
     kcom = MatrixXd::Zero(3, 3);
     kzmp = MatrixXd::Zero(3, 3);
+    kcom << 4,0,0,0,4,0,0,0,0;
+    kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();
