@@ -17,6 +17,7 @@ class Controller {
         void setK_com_(Matrix3d K_com);
         void setDt(double dt);
         void setInitCoM(Vector3d init_com);
+        double footLenController(double fz_d, double fz, double kp, double kr);
 
     private:
         Matrix3d K_p_;
@@ -26,4 +27,5 @@ class Controller {
         Vector3d xiErrorInt;
         Vector3d CoM_;
         double dt_;
+        double deltaZ_;
 };

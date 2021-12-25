@@ -11,6 +11,7 @@ Controller::Controller(Matrix3d K_p, Matrix3d K_i, Matrix3d K_zmp, Matrix3d K_co
     //this->K_zmp_ = K_zmp;
     //this->K_com_ = K_com;
     xiErrorInt << 0.0, 0.0, 0.0;
+    double deltaZ_ = 0.0;
 }
 
 Vector3d Controller::dcmController(Vector3d xiRef, Vector3d xiDotRef, Vector3d xiReal, double deltaZVRP){
@@ -27,6 +28,12 @@ Vector3d Controller::comController(Vector3d xCOMRef, Vector3d xDotCOMRef, Vector
     xDotStar = xDotCOMRef - K_zmp_*(rZMPRef - rZMPReal) + K_com_*(xCOMRef - xCOMReal);
     CoM_ += xDotStar * dt_;
     return CoM_;
+}
+
+double Controller::footLenController(double delta_fz_d, double delta_fz, double kp, double kr){
+    double deltaZ_dot = kp * (delta_fz_d - delta_fz);
+    deltaZ_ += deltaZ_dot * dt_;
+    return deltaZ_dot;
 }
 
 void Controller::setDt(double dt){

@@ -37,12 +37,15 @@ class Robot{
                               std_srvs::Empty::Response &res);
 
         int findTrajIndex(vector<int> arr, int n, int K);
+
+        void distributeFT(Vector3d zmp_y, Vector3d r_foot_y,Vector3d l_foot_y, Vector3d &r_wrench, Vector3d &l_wrench);
     private:
 
         double thigh_;
         double shank_;
         double torso_;
         double dt_;
+        double mass_;
 
         double joints_[12];
 
