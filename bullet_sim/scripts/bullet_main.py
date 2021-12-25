@@ -76,14 +76,14 @@ class robot_sim:
                     init_rankle_pos,init_rankle_orient,final_rankle_pos,final_rankle_orient, init_motion_time, 1 / self.freq)
 
         alpha = 0.44
-        t_ds = 0.1
+        t_ds = 0.2
         t_step = 1.0
-        step_length = -0.1
+        step_length = 0.15
         step_width = 0.0
         CoM_height = 0.68
         step_count = 6
         ankle_height = 0.025
-        theta = 0.15
+        theta = 0.0
         rospy.wait_for_service("/traj_gen")
         trajectory_handle = rospy.ServiceProxy("/traj_gen", Trajectory)
 

@@ -31,6 +31,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
     torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
 
+    mass_ = 48.3; // SR1: ?, Surena4: 48.3, Surena5: ?
+
     dataSize_ = 0;
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -119,6 +121,17 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
 
     int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
+
+    if(iter > trajSizes_[0] && iter < trajSizes_[1]){
+        Vector3d r_wrench;
+        Vector3d l_wrench;
+        distributeFT(zmpd_[iter - trajSizes_[0]], rAnklePos_[iter], lAnklePos_[iter], r_wrench, l_wrench);
+        //cout << r_wrench(0) << "," << r_wrench(1) << "," << r_wrench(2) << ","
+        //<< l_wrench(0) << "," << l_wrench(1) << "," << l_wrench(2) << endl;
+        //double delta_z = onlineWalk_.footLenController(r_wrench(0) - l_wrench(0), f_r - f_l, 1, 0);
+        cout << r_wrench(0) << ',' << l_wrench(0) << ',' << f_r << ',' << f_l << endl;
+    }
+
     if(trajContFlags_[traj_index] == true){
         Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
         Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
@@ -127,10 +140,8 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     //cout << CoMRot_[iter].eulerAngles(0, 1, 2)(0) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(1) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
     //        lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
     //        rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
-    
-    //doIK(pelvis, attitude, lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
     doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
-    //doIK(pelvis, attitude, lfoot, attitude, rfoot, attitude);
+
     for(int i = 0; i < 12; i++)
         joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
 }
@@ -371,6 +382,20 @@ int Robot::findTrajIndex(vector<int> arr, int n, int K)
     return end + 1;
 }
 
+void Robot::distributeFT(Vector3d zmp, Vector3d r_foot,Vector3d l_foot, Vector3d &r_wrench, Vector3d &l_wrench){
+    
+    double k_f = abs((zmp(1) - r_foot(1))) / abs((r_foot(1) - l_foot(1)));
+    l_wrench(0) = -k_f * mass_ * K_G;
+    r_wrench(0) = -(1 - k_f) * mass_ * K_G;
+
+    l_wrench(1) = l_wrench(0) * (zmp(1) - l_foot(1));
+    r_wrench(1) = r_wrench(0) * (zmp(1) - r_foot(1));
+
+    l_wrench(2) = l_wrench(0) * (zmp(0) - l_foot(0));
+    r_wrench(2) = r_wrench(0) * (zmp(0) - r_foot(0));
+}
+
+
 bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res)
 {
@@ -607,6 +632,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
             config[i] = req.config[i-1];
             jnt_vel[i] = req.jnt_vel[i-1];  
         }
+        //cout << req.right_ft[0] << "," << req.right_ft[1] << "," << req.right_ft[2] << ","
+        //<< req.left_ft[0] << "," << req.left_ft[1] << "," << req.left_ft[2] << "," << endl;
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]), jnt_angs);
@@ -651,7 +678,11 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
     trajSizes_.clear();
     trajContFlags_.clear();
     dataSize_ = 0;
-
+    rSole_ << 0.0, -torso_, 0.0;
+    lSole_ << 0.0, torso_, 0.0; 
+    isTrajAvailable_ = false;
+    Vector3d position(0.0, 0.0, 0.0);
+    links_[0]->initPose(position, Matrix3d::Identity(3, 3));
     return true;
 }
 
@@ -669,8 +700,8 @@ int main(int argc, char* argv[])
     ki = MatrixXd::Zero(3, 3);
     kcom = MatrixXd::Zero(3, 3);
     kzmp = MatrixXd::Zero(3, 3);
-    kcom << 4,0,0,0,4,0,0,0,0;
-    kzmp << 0.5,0,0,0,0.5,0,0,0,0;
+    //kcom << 4,0,0,0,4,0,0,0,0;
+    //kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();
