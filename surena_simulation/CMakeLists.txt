@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   trajectory_planner
   choreonoid
   message_generation
+  actionlib_msgs
   )
 
 if(CHOREONOID_CXX_STANDARD)
@@ -29,3 +30,25 @@ include_directories(${catkin_INCLUDE_DIRS})
 add_subdirectory(src)
 
 
+add_service_files(
+  FILES
+  bump.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  #std_srvs
+)
+
+include_directories(
+  include/surena_simulation
+  ${catkin_INCLUDE_DIRS}
+)
+
+file(GLOB SOURCES "src/BumpSensor.cpp" "src/Obstacle.cpp")
+add_executable(bump_sensor ${SOURCES})
+target_link_libraries(bump_sensor ${catkin_LIBRARIES})
+add_dependencies(bump_sensor surena_simulation_generate_messages_cpp
+${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
