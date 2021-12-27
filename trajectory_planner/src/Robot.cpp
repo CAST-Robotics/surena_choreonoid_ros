@@ -31,6 +31,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
     torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
 
+    mass_ = 48.3; // SR1: ?, Surena4: 48.3, Surena5: ?
+
     dataSize_ = 0;
     rSole_ << 0.0, -torso_, 0.0;
     lSole_ << 0.0, torso_, 0.0;       // might be better if these two are input argument of constructor
@@ -119,6 +121,17 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
 
     int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
+
+    if(iter > trajSizes_[0] && iter < trajSizes_[1]){
+        Vector3d r_wrench;
+        Vector3d l_wrench;
+        distributeFT(zmpd_[iter - trajSizes_[0]], rAnklePos_[iter], lAnklePos_[iter], r_wrench, l_wrench);
+        //cout << r_wrench(0) << "," << r_wrench(1) << "," << r_wrench(2) << ","
+        //<< l_wrench(0) << "," << l_wrench(1) << "," << l_wrench(2) << endl;
+        //double delta_z = onlineWalk_.footLenController(r_wrench(0) - l_wrench(0), f_r - f_l, 1, 0);
+        cout << r_wrench(0) << ',' << l_wrench(0) << ',' << f_r << ',' << f_l << endl;
+    }
+
     if(trajContFlags_[traj_index] == true){
         Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
         Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
@@ -127,10 +140,8 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     //cout << CoMRot_[iter].eulerAngles(0, 1, 2)(0) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(1) << "," << CoMRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
     //        lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
     //        rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
-    
-    //doIK(pelvis, attitude, lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
     doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
-    //doIK(pelvis, attitude, lfoot, attitude, rfoot, attitude);
+
     for(int i = 0; i < 12; i++)
         joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
 }
@@ -371,6 +382,20 @@ int Robot::findTrajIndex(vector<int> arr, int n, int K)
     return end + 1;
 }
 
+void Robot::distributeFT(Vector3d zmp, Vector3d r_foot,Vector3d l_foot, Vector3d &r_wrench, Vector3d &l_wrench){
+    
+    double k_f = abs((zmp(1) - r_foot(1))) / abs((r_foot(1) - l_foot(1)));
+    l_wrench(0) = -k_f * mass_ * K_G;
+    r_wrench(0) = -(1 - k_f) * mass_ * K_G;
+
+    l_wrench(1) = l_wrench(0) * (zmp(1) - l_foot(1));
+    r_wrench(1) = r_wrench(0) * (zmp(1) - r_foot(1));
+
+    l_wrench(2) = l_wrench(0) * (zmp(0) - l_foot(0));
+    r_wrench(2) = r_wrench(0) * (zmp(0) - r_foot(0));
+}
+
+
 bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res)
 {
@@ -421,20 +446,20 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     else{   //Turning Walk
         double r = abs(step_len/theta);
         sign = abs(step_len) / step_len;
-        cout << sign << endl;
+        //cout << sign << endl;
         ankle_rf[0] = Vector3d(0.0, -sign * torso_, 0.0);
         dcm_rf[0] = Vector3d::Zero(3);
         ankle_rf[num_step + 1] = (r + pow(-1, num_step) * torso_) * Vector3d(sin(theta * (num_step-1)), sign * cos(theta * (num_step-1)), 0.0) + 
                                     Vector3d(0.0, -sign * r, 0.0);
-        cout << ankle_rf[0](0) << "," << ankle_rf[0](1) << "," << ankle_rf[0](2) << endl;
+        //cout << ankle_rf[0](0) << "," << ankle_rf[0](1) << "," << ankle_rf[0](2) << endl;
         for (int i = 1; i <= num_step; i ++){
             ankle_rf[i] = (r + pow(-1, i-1) * torso_) * Vector3d(sin(theta * (i-1)), sign * cos(theta * (i-1)), 0.0) + 
                                     Vector3d(0.0, -sign * r, 0.0);
             dcm_rf[i] = ankle_rf[i];
-            cout << dcm_rf[i](0) << "," << dcm_rf[i](1) << "," << dcm_rf[i](2) << endl ;
+            //cout << dcm_rf[i](0) << "," << dcm_rf[i](1) << "," << dcm_rf[i](2) << endl ;
         }
         dcm_rf[num_step + 1] = 0.5 * (ankle_rf[num_step] + ankle_rf[num_step + 1]);
-        cout << ankle_rf[num_step + 1](0) << "," << ankle_rf[num_step + 1](1) << "," << ankle_rf[num_step + 1](2) << endl ;
+        //cout << ankle_rf[num_step + 1](0) << "," << ankle_rf[num_step + 1](1) << "," << ankle_rf[num_step + 1](2) << endl ;
 
         //if (theta > 0){
         //    dcm_rf[1] << 0.0, -torso_, 0.0;
@@ -468,7 +493,6 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     xiDesired_ = trajectoryPlanner->getXiTrajectory();
     zmpd_ = trajectoryPlanner->getZMP();
     xiDot_ = trajectoryPlanner->getXiDot();
-    CoMDot_ = trajectoryPlanner->get_CoMDot();
     delete[] dcm_rf;
     anklePlanner->updateFoot(ankle_rf, -sign);
     anklePlanner->generateTrajectory();
@@ -505,6 +529,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         lAnkleRot_ = anklePlanner->getRotTrajectoryR();
         rAnkleRot_ = anklePlanner->getRotTrajectoryL();
     }
+    CoMDot_ = trajectoryPlanner->get_CoMDot();
     //ROS_INFO("trajectory generated");
     res.result = true;
     trajSizes_.push_back(dataSize_);
@@ -607,6 +632,8 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
             config[i] = req.config[i-1];
             jnt_vel[i] = req.jnt_vel[i-1];  
         }
+        //cout << req.right_ft[0] << "," << req.right_ft[1] << "," << req.right_ft[2] << ","
+        //<< req.left_ft[0] << "," << req.left_ft[1] << "," << req.left_ft[2] << "," << endl;
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]), jnt_angs);
@@ -619,13 +646,13 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
         return false;
     }
     
-    if (req.iter == size_ - 1 ){ 
-        write2File(FKCoM_, size_,"CoM Real");
-        write2File(realZMP_, size_, "ZMP Real");
-        write2File(realXi_, size_, "Xi Real");
-        write2File(FKCoMDot_, size_, "CoM Velocity Real");
-        write2File(rSoles_, size_, "Right Sole");
-        write2File(lSoles_, size_, "Left Sole");
+    if (req.iter == dataSize_ - 1 ){ 
+        write2File(FKCoM_, dataSize_,"CoM Real");
+        write2File(realZMP_, dataSize_, "ZMP Real");
+        write2File(realXi_, dataSize_, "Xi Real");
+        write2File(FKCoMDot_, dataSize_, "CoM Velocity Real");
+        write2File(rSoles_, dataSize_, "Right Sole");
+        write2File(lSoles_, dataSize_, "Left Sole");
     }
     //ROS_INFO("joint angles returned");
     return true;
@@ -640,10 +667,22 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
     delete[] CoMRot_;
     delete[] lAnkleRot_;
     delete[] rAnkleRot_;
+
+    delete[] FKCoM_;
+    delete[] FKCoMDot_;
+    delete[] realXi_;
+    delete[] realZMP_;
+    delete[] rSoles_;
+    delete[] lSoles_;
+
     trajSizes_.clear();
     trajContFlags_.clear();
     dataSize_ = 0;
-
+    rSole_ << 0.0, -torso_, 0.0;
+    lSole_ << 0.0, torso_, 0.0; 
+    isTrajAvailable_ = false;
+    Vector3d position(0.0, 0.0, 0.0);
+    links_[0]->initPose(position, Matrix3d::Identity(3, 3));
     return true;
 }
 
@@ -661,6 +700,8 @@ int main(int argc, char* argv[])
     ki = MatrixXd::Zero(3, 3);
     kcom = MatrixXd::Zero(3, 3);
     kzmp = MatrixXd::Zero(3, 3);
+    //kcom << 4,0,0,0,4,0,0,0,0;
+    //kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();
