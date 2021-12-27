@@ -9,16 +9,19 @@ Obstacle::Obstacle(double xl, double xh, double yl, double yh, string type, vect
 }
 
 Obstacle::~Obstacle(){
-    cout << "Obstacle Object Destroyed" << endl;
+    
 }
 
 double Obstacle::profile(double x, double y){
     
-    if (this->type_ == "cube"){
+    if (this->type_ == "box"){
         return this->cubeProfile(x, y);
     }
     else if (this->type_ == "ramp"){
         return this->rampProfile(x, y);
+    }
+    else{
+        throw std::invalid_argument( "invalid obstacle type" );
     }
 }
 

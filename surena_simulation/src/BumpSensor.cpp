@@ -1,39 +1,52 @@
 #include <BumpSensor.h>
 
 BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h){
+    cout << "Starting Bump Sensor Object" << endl;
     this->nh_ = nh;
     this->maxValue_ = max_h;
-    bumpServer_ = nh->advertiseService("/traj_gen", &BumpSensor::sensorCallback, this);
+    bumpServer_ = nh->advertiseService("/bumpSensor", &BumpSensor::sensorCallback, this);
     // Define Obstacles in the simulation environmenrt
     ifstream obs_pos;
-    obs_pos.open("../config/obstacles.txt");
+    obs_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/obstacles.txt");
+    if(! obs_pos.is_open())
+        cout << "could not find the description file for obstacles" << endl;
     string line, type;
+    char ch;
     while(! obs_pos.eof()){
-        getline(obs_pos, line);
-        if(line == "-"){
+        obs_pos >> ch;
+        if(strcmp(line.c_str(),"-")){
             getline(obs_pos, line);
+            if(line.length() == 0)
+                getline(obs_pos, line);
             vector<double> values, parameters;
             this->readOptions(line, values);
             getline(obs_pos, type);
+            getline(obs_pos, line);
             this->readOptions(line, parameters);
             Obstacle o(values[0], values[1], values[2], values[3], type, parameters);
             this->obstacles_.push_back(o);
         }
     }
     obs_pos.close();
+    cout << "Obstacles Loaded for Bump Sensor" << endl;
     // Define Robot Sole Dimentions
     ifstream sole_pos;
-    sole_pos.open("../config/sole.txt");
+    sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole.txt");
+    if (!sole_pos.is_open())
+        cout << "could not find the description file for obstacles" << endl;
     sensorPos_ = new Matrix4d[8];
     for(int i = 0; i < 8; i ++){
         sensorPos_[i] = Matrix4d::Identity(4,4);
         getline(sole_pos, line);
         vector<double> values;
+        readOptions(line, values);
         sensorPos_[i](0,3) = values[0];
         sensorPos_[i](1,3) = values[1];
         sensorPos_[i](2,3) = values[2];
     }
     sole_pos.close();
+    cout << "Robot Sole Dimentions Loaded" << endl;
+    cout << "Bump Sensors Initialized" << endl;
 }
 
 bool BumpSensor::sensorCallback(surena_simulation::bump::Request  &req,surena_simulation::bump::Response &res){
@@ -63,12 +76,28 @@ bool BumpSensor::sensorCallback(surena_simulation::bump::Request  &req,surena_si
         else
             res.bump_vals[i] = maxValue_;
     }
+    for(int i = 4; i < 8; i++){
+        double height = 0;
+        double x, y, z;
+        x = (right_ankle * sensorPos_[i])(0,3);
+        y = (right_ankle * sensorPos_[i])(1,3);
+        z = (right_ankle * sensorPos_[i])(2,3);
+        for(int j = 0; j < obstacles_.size(); j++){
+            if (obstacles_[j].profile(x, y) > height){
+                height = obstacles_[j].profile(x, y);
+            }
+        }
+        if(z - height < maxValue_)
+            res.bump_vals[i] = z - height;
+        else
+            res.bump_vals[i] = maxValue_;
+    }
     return true;
 }
 
 void BumpSensor::readOptions(string opt, vector<double> (&out)){
     stringstream ss(opt);
-    float i;
+    double i;
 
     while (ss >> i){
         out.push_back(i);
@@ -86,4 +115,5 @@ int main(int argc, char* argv[]){
     ros::init(argc, argv, "bump_sensor");
     ros::NodeHandle nh;
     BumpSensor sensor(&nh, 0.02);
+    ros::spin();
 }
