@@ -1,7 +1,6 @@
 #include <BumpSensor.h>
 
-BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h){
-    cout << "Starting Bump Sensor Object" << endl;
+BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h, char* simulator){
     this->nh_ = nh;
     this->maxValue_ = max_h;
     bumpServer_ = nh->advertiseService("/bumpSensor", &BumpSensor::sensorCallback, this);
@@ -28,12 +27,18 @@ BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h){
         }
     }
     obs_pos.close();
-    cout << "Obstacles Loaded for Bump Sensor" << endl;
     // Define Robot Sole Dimentions
     ifstream sole_pos;
-    sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole.txt");
+    if(strcmp(simulator,"bullet") == 0){
+        sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole_bullet.txt.txt");
+        cout << "Using Dimentions for Bullet Simulation" << endl;
+    }
+    else{
+        sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole_choreonoid.txt");
+        cout << "using Dimentions for Choreonoid Simulation" << endl;
+    }
     if (!sole_pos.is_open())
-        cout << "could not find the description file for obstacles" << endl;
+        cout << "could not find the description file for sensor positions" << endl;
     sensorPos_ = new Matrix4d[8];
     for(int i = 0; i < 8; i ++){
         sensorPos_[i] = Matrix4d::Identity(4,4);
@@ -45,7 +50,6 @@ BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h){
         sensorPos_[i](2,3) = values[2];
     }
     sole_pos.close();
-    cout << "Robot Sole Dimentions Loaded" << endl;
     cout << "Bump Sensors Initialized" << endl;
 }
 
@@ -114,6 +118,6 @@ BumpSensor::~BumpSensor(){
 int main(int argc, char* argv[]){
     ros::init(argc, argv, "bump_sensor");
     ros::NodeHandle nh;
-    BumpSensor sensor(&nh, 0.02);
+    BumpSensor sensor(&nh, 0.02, argv[1]);
     ros::spin();
 }

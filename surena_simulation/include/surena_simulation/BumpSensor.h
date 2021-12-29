@@ -15,7 +15,7 @@ using namespace std;
 
 class BumpSensor{
     public:
-        BumpSensor(ros::NodeHandle* nh, double max_h);
+        BumpSensor(ros::NodeHandle* nh, double max_h, char* simulator);
         ~BumpSensor();
     private:
         ros::NodeHandle* nh_;
