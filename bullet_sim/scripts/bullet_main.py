@@ -10,6 +10,7 @@ import cv2
 import rospy
 
 from trajectory_planner.srv import JntAngs, Trajectory, GeneralTraj
+from surena_simulation.srv import bump
 from bullet_sim.srv import Walk, WalkResponse
 from std_srvs.srv import Empty
 import math
@@ -52,6 +53,7 @@ class robot_sim:
 
         rospy.wait_for_service("/general_traj")
         general_motion_handle = rospy.ServiceProxy("/general_traj", GeneralTraj)
+        bump_sensor_handle = rospy.ServiceProxy("/bumpSensor", bump)
         init_com_pos = [0, 0, 0.73]
         init_com_orient = [0, 0, 0]  
         final_com_pos = [0, 0, 0.68]
@@ -118,8 +120,17 @@ class robot_sim:
                 acc = (vel - pre_vel) * self.freq
                 #gyro = pybullet.getLinkState(self.robotID, 12)[7]
                 gyro = np.array([0, 0, 0])
-
-                All = joint_state_handle(self.iter, left_ft, right_ft, config, jnt_vel, acc, gyro).jnt_angs
+                l_ankle = np.eye(4)
+                r_ankle = np.eye(4)
+                l_ankle[:3,:3] = np.array(pybullet.getMatrixFromQuaternion(
+                                            pybullet.getLinkState(self.robotID, 11)[1])).reshape(3,3)
+                r_ankle[:3,:3] = np.array(pybullet.getMatrixFromQuaternion(
+                                            pybullet.getLinkState(self.robotID, 5)[1])).reshape(3,3)
+                l_ankle[:3,3] = pybullet.getLinkState(self.robotID, 11)[0]
+                r_ankle[:3,3] = pybullet.getLinkState(self.robotID, 5)[0]
+                bump_vals = bump_sensor_handle(r_ankle.flatten().tolist(), l_ankle.flatten().tolist()).bump_vals
+                print(bump_vals, type(bump_vals))
+                All = joint_state_handle(self.iter, left_ft, right_ft, config, jnt_vel, acc, gyro, bump_vals).jnt_angs
 
                 leftConfig = All[6:12]
                 rightConfig = All[0:6]
