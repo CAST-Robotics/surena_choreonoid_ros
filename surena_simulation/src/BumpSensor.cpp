@@ -71,10 +71,9 @@ bool BumpSensor::sensorCallback(surena_simulation::bump::Request  &req,surena_si
                 height = obstacles_[j].profile(x, y);
             }
         }
-        if(z - height < maxValue_)
-            res.bump_vals[i] = z - height;
-        else
-            res.bump_vals[i] = maxValue_;
+        res.bump_vals[i] = z - height;
+        if(res.bump_vals[i] > maxValue_)
+            res.bump_vals[i] = maxValue_; 
     }
     for(int i = 4; i < 8; i++){
         double height = 0;
@@ -87,11 +86,12 @@ bool BumpSensor::sensorCallback(surena_simulation::bump::Request  &req,surena_si
                 height = obstacles_[j].profile(x, y);
             }
         }
-        if(z - height < maxValue_)
-            res.bump_vals[i] = z - height;
-        else
-            res.bump_vals[i] = maxValue_;
+        res.bump_vals[i] = z - height;
+        if(res.bump_vals[i] > maxValue_)
+            res.bump_vals[i] = maxValue_;            
     }
+    cout << res.bump_vals[0] << "," << res.bump_vals[1] << "," << res.bump_vals[2] << "," << res.bump_vals[3] << ","
+                 << res.bump_vals[4] << "," << res.bump_vals[5] << "," << res.bump_vals[6] << "," << res.bump_vals[7] << endl;
     return true;
 }
 

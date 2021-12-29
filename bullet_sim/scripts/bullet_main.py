@@ -126,8 +126,8 @@ class robot_sim:
                                             pybullet.getLinkState(self.robotID, 11)[1])).reshape(3,3)
                 r_ankle[:3,:3] = np.array(pybullet.getMatrixFromQuaternion(
                                             pybullet.getLinkState(self.robotID, 5)[1])).reshape(3,3)
-                l_ankle[3,:3] = pybullet.getLinkState(self.robotID, 11)[0]
-                r_ankle[3,:3] = pybullet.getLinkState(self.robotID, 5)[0]
+                l_ankle[:3,3] = pybullet.getLinkState(self.robotID, 11)[0]
+                r_ankle[:3,3] = pybullet.getLinkState(self.robotID, 5)[0]
                 bump_vals = bump_sensor_handle(r_ankle.flatten().tolist(), l_ankle.flatten().tolist()).bump_vals
                 print(bump_vals, type(bump_vals))
                 All = joint_state_handle(self.iter, left_ft, right_ft, config, jnt_vel, acc, gyro, bump_vals).jnt_angs
