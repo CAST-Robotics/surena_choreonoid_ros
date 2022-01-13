@@ -116,8 +116,7 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);
     MatrixXd pelvis(3,1);
-    lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
-    rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
+
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
 
     int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
@@ -128,8 +127,17 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         distributeFT(zmpd_[iter - trajSizes_[0]], rAnklePos_[iter], lAnklePos_[iter], r_wrench, l_wrench);
         //cout << r_wrench(0) << "," << r_wrench(1) << "," << r_wrench(2) << ","
         //<< l_wrench(0) << "," << l_wrench(1) << "," << l_wrench(2) << endl;
-        //double delta_z = onlineWalk_.footLenController(r_wrench(0) - l_wrench(0), f_r - f_l, 1, 0);
-        cout << r_wrench(0) << ',' << l_wrench(0) << ',' << f_r << ',' << f_l << endl;
+        double delta_z = onlineWalk_.footLenController(r_wrench(0) - l_wrench(0), f_r - f_l, 0.02, 1500);
+        lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2) - 0.5 * delta_z;
+        rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2) + 0.5 * delta_z;
+        cout << lAnklePos_[iter](2) << ',' << rAnklePos_[iter](2) << endl;
+        //cout << r_wrench(0) << ',' << l_wrench(0) << ',' << f_r << ',' << f_l << endl;
+        //cout<< delta_z <<endl;
+    }
+    else{
+        lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
+        rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
+
     }
 
     if(trajContFlags_[traj_index] == true){
