@@ -6,6 +6,7 @@
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/GeneralTraj.h"
+#include "surena_simulation/bump.h"
 #include "std_srvs/Empty.h"
 
 using namespace std;
@@ -118,6 +119,10 @@ public:
             Link* joint = ioBody->joint(i);
             joint->setActuationMode(Link::JOINT_TORQUE);
             io->enableIO(joint);
+            if(i == 5 || i == 11){
+                // Enabling Ankles Position IO (required by bump sensor)
+                io->enableInput(joint, LINK_POSITION);
+            }
             qref[i] = joint->q();
             qold[i] = qref[i];
             
@@ -126,6 +131,7 @@ public:
     }
     virtual bool control() override
     {
+        ros::ServiceClient bumpSensor = nh.serviceClient<surena_simulation::bump>("/bumpSensor");
         ros::ServiceClient jnt_client = nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
         trajectory_planner::JntAngs jntangs;
         if (idx < size_ - 1){
@@ -150,6 +156,19 @@ public:
             jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
             jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
 
+            // Getting Bump Sensor Values
+            surena_simulation::bump bump_msg;
+            Matrix4d l_ankle, r_ankle;
+            l_ankle.block<3,1>(0, 3) = ioBody->joint(11)->position().translation();
+            r_ankle.block<3,1>(0, 3) = ioBody->joint(5)->position().translation();
+            l_ankle.block<3,3>(0, 0) = ioBody->joint(11)->position().rotation();
+            r_ankle.block<3,3>(0, 0) = ioBody->joint(5)->position().rotation();
+            for(int i = 0; i < 16; i ++){
+                bump_msg.request.left_trans[i] = l_ankle(i / 4, i % 4);
+                bump_msg.request.right_trans[i] = r_ankle(i / 4, i % 4);
+            }
+            bumpSensor.call(bump_msg);
+            jntangs.request.bump = bump_msg.response.bump_vals;
             if (result){
 
                 jnt_client.call(jntangs);
