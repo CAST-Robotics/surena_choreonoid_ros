@@ -36,6 +36,117 @@ double Controller::footLenController(double delta_fz_d, double delta_fz, double 
     return deltaZ_;
 }
 
+vector<double> Controller::ankleOrientController(double *bump_sensor_readings, bool left_swing, double k_roll, double k_pitch){
+    vector<double> modification_angles;
+    double roll_modification;
+    double pitch_modification;
+    if(left_swing){
+        roll_modification = k_roll*((bump_sensor_readings[1] + bump_sensor_readings[3])/2 - (bump_sensor_readings[0] + bump_sensor_readings[2])/2);
+        modification_angles.push_back(roll_modification);
+        pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+        modification_angles.push_back(pitch_modification);
+    }else{
+        roll_modification = k_roll*((bump_sensor_readings[1] + bump_sensor_readings[3])/2 - (bump_sensor_readings[0] + bump_sensor_readings[2])/2);
+        modification_angles.push_back(roll_modification);
+        pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+        modification_angles.push_back(pitch_modification);
+    }
+    return modification_angles;
+}
+
+/*vector<double> Controller::ankleOrientController(double *bump_sensor_readings, bool left_swing, double k_roll, double k_pitch){
+    vector<int> active_sensors = activeSensors(bump_sensor_readings, left_swing);
+    vector<double> modification;
+    double roll_modification;
+    double pitch_modification;
+    int active_size = active_sensors.size();
+    if(left_swing){
+        switch (active_size)
+        {
+        case 1:
+            roll_modification = k_roll*((bump_sensor_readings[1] + bump_sensor_readings[3])/2 - (bump_sensor_readings[0] + bump_sensor_readings[2])/2);
+            pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+            break;
+        case 2:
+            if((active_sensors[0] == 0 && active_sensors[1] == 3) || (active_sensors[0] == 1 && active_sensors[1] == 2)){
+                pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+            }else{
+                roll_modification = k_roll*((bump_sensor_readings[1] + bump_sensor_readings[3])/2 - (bump_sensor_readings[0] + bump_sensor_readings[2])/2);
+                pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+            }
+            break;
+        case 3:
+            if(active_sensors[0] == 0 && active_sensors[1] == 1 && active_sensors[2] == 2){
+                pitch_modification = k_pitch * (abs(bump_sensor_readings[0]-bump_sensor_readings[2]));
+                roll_modification = k_roll * (abs(bump_sensor_readings[0] - bump_sensor_readings[1]));
+            }else if(active_sensors[0] == 1 && active_sensors[1] == 2 && active_sensors[2] == 3){
+                pitch_modification = k_pitch * (abs(bump_sensor_readings[1]-bump_sensor_readings[3]));
+                roll_modification = k_roll * (abs(bump_sensor_readings[2] - bump_sensor_readings[3]));
+            }else if(active_sensors[0] == 0 && active_sensors[1] == 2 && active_sensors[2] == 3){
+                pitch_modification = k_pitch * (abs(bump_sensor_readings[0]-bump_sensor_readings[2]));
+                roll_modification = k_roll * (abs(bump_sensor_readings[2] - bump_sensor_readings[3]));
+            }else{
+                pitch_modification = k_pitch * (abs(bump_sensor_readings[1]-bump_sensor_readings[3]));
+                roll_modification = k_roll * (abs(bump_sensor_readings[0] - bump_sensor_readings[1]));
+            }
+            break;        
+        
+        default:
+            roll_modification = k_roll*((bump_sensor_readings[1] + bump_sensor_readings[3])/2 - (bump_sensor_readings[0] + bump_sensor_readings[2])/2);
+            pitch_modification = k_pitch*((bump_sensor_readings[0] + bump_sensor_readings[1])/2 - (bump_sensor_readings[2] + bump_sensor_readings[3])/2);
+            break;
+        }
+    }    
+}*/
+
+/*vector<int> Controller::activeSensors(double* bump_sensor_readings, bool left_swing){
+    vector<int> active_sensors;
+    if(left_swing){
+        for(int i=0; i<4; i++){
+            if (bump_sensor_readings[i] < 2){
+                active_sensors.push_back(i);
+            }
+        }
+    }else{
+        for(int i=4; i<8; i++){
+            if (bump_sensor_readings[i] < 2){
+                active_sensors.push_back(i);
+            }
+        }
+    }
+    return active_sensors;
+}*/
+
+/*bool Controller::isRightActive(int index){
+    bool result;
+    if(index%2 == 1){
+        result = true;
+    }else{
+        result = false;
+    }
+    return result;
+}
+
+bool Controller::isUpActive(int index){
+    bool result;
+    if(index == 0 || index == 1 || index == 4 || index == 5){
+        result = true;
+    }else{
+        result = false;
+    }
+    return result;
+}
+
+int Controller::leastMemberIndex(double *arr, int size){
+    int index = 0;
+    for(int i=1; i<size; i++){
+        if (arr[i] < arr[index]){
+            index = i;
+        }
+    }
+    return index;
+}*/
+
 void Controller::setDt(double dt){
     this->dt_ = dt;
 }

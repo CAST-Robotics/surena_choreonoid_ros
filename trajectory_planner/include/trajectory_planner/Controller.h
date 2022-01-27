@@ -1,6 +1,7 @@
 #include <iostream>
 #include <eigen3/Eigen/Eigen>
 #include <math.h>
+#include <vector>
 
 
 using namespace std;
@@ -18,6 +19,7 @@ class Controller {
         void setDt(double dt);
         void setInitCoM(Vector3d init_com);
         double footLenController(double fz_d, double fz, double kp, double kr);
+        vector<double> ankleOrientController(double *bump_sensor_readings, bool left_swing, double k_roll, double k_pitch);
 
     private:
         Matrix3d K_p_;
@@ -28,4 +30,8 @@ class Controller {
         Vector3d CoM_;
         double dt_;
         double deltaZ_;
+        int Controller::leastMemberIndex(double *arr, int size);
+        vector<int> Controller::activeSensors(double* bump_sensor_readings, bool left_swing);
+        bool Controller::isRightActive(int index);
+        bool Controller::isUpActive(int index);
 };
