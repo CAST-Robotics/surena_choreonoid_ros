@@ -6,7 +6,7 @@ BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h, char* simulator){
     bumpServer_ = nh->advertiseService("/bumpSensor", &BumpSensor::sensorCallback, this);
     // Define Obstacles in the simulation environmenrt
     ifstream obs_pos;
-    obs_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/obstacles.txt");
+    obs_pos.open("/home/surena/DynCont/Choreonoid_ROS/src/surena_choreonoid_ros/surena_simulation/config/obstacles.txt");
     if(! obs_pos.is_open())
         cout << "could not find the description file for obstacles" << endl;
     string line, type;
@@ -30,11 +30,11 @@ BumpSensor::BumpSensor(ros::NodeHandle* nh, double max_h, char* simulator){
     // Define Robot Sole Dimentions
     ifstream sole_pos;
     if(strcmp(simulator,"bullet") == 0){
-        sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole_bullet.txt.txt");
+        sole_pos.open("/home/surena/DynCont/Choreonoid_ROS/src/surena_choreonoid_ros/surena_simulation/config/sole_bullet.txt");
         cout << "Using Dimentions for Bullet Simulation" << endl;
     }
     else{
-        sole_pos.open("/home/kassra/CAST/choreonoid_ws/src/surena_choreonoid_ros/surena_simulation/config/sole_choreonoid.txt");
+        sole_pos.open("/home/surena/DynCont/Choreonoid_ROS/src/surena_choreonoid_ros/surena_simulation/config/sole_choreonoid.txt");
         cout << "using Dimentions for Choreonoid Simulation" << endl;
     }
     if (!sole_pos.is_open())

@@ -27,9 +27,9 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     
     // SURENA IV geometrical params
     
-    thigh_ = 0.37;  // SR1: 0.3535, Surena4: 0.37, Surena5: 0.36
-    shank_ = 0.36;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
-    torso_ = 0.115;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
+    thigh_ = 0.36;  // SR1: 0.3535, Surena4: 0.37, Surena5: 0.36
+    shank_ = 0.35;     // SR1: 0.3, Surena4: 0.36, Surena5: 0.35
+    torso_ = 0.1;    // SR1: 0.09, Surena4: 0.115, Surena5: 0.1
 
     mass_ = 48.3; // SR1: ?, Surena4: 48.3, Surena5: ?
 
@@ -118,9 +118,11 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     MatrixXd pelvis(3,1);
 
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
+    lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
+    rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
 
     int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
-
+/*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
         Vector3d r_wrench;
         Vector3d l_wrench;
@@ -139,7 +141,7 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
 
     }
-
+*/
     if(trajContFlags_[traj_index] == true){
         Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
         Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
