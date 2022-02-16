@@ -20,11 +20,19 @@ const double pgain[] = {
     8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
     3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     8000.0, 8000.0, 8000.0 };
+
+const double dgain[] = {
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0 };
 */
 //Surena IV
+
 const double pgain[] = {
-    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0,
-    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 8000.0,
+    8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
+    8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0, 8000.0,
     8000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
     3000.0, 3000.0, 3000.0 };
@@ -36,7 +44,22 @@ const double dgain[] = {
     100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
     100.0, 100.0, 100.0 };
 
+//SurenaV
+/*
+const double pgain[] = {
+    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0,
+    10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 8000.0,
+    8000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
+    3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0, 3000.0,
+    3000.0, 3000.0, 3000.0 };
 
+const double dgain[] = {
+    20.0, 20.0, 20.0, 20.0, 20.0, 20.0,
+    20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0 };
+*/
 class SurenaController : public SimpleController{
   
     bool result;
@@ -63,19 +86,19 @@ public:
         // General Motion
         ros::ServiceClient gen_client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
         trajectory_planner::GeneralTraj general_traj;
-        general_traj.request.init_com_pos = {0, 0, 0.73};
+        general_traj.request.init_com_pos = {0, 0, 0.71};
         general_traj.request.init_com_orient = {0, 0, 0};
-        general_traj.request.final_com_pos = {0, 0, 0.68};
+        general_traj.request.final_com_pos = {0, 0, 0.65};
         general_traj.request.final_com_orient = {0, 0, 0};
 
-        general_traj.request.init_lankle_pos = {0, 0.115, 0};
+        general_traj.request.init_lankle_pos = {0, 0.1, 0};
         general_traj.request.init_lankle_orient = {0, 0, 0};
-        general_traj.request.final_lankle_pos = {0, 0.115, 0};
+        general_traj.request.final_lankle_pos = {0, 0.1, 0};
         general_traj.request.final_lankle_orient = {0, 0, 0};
 
-        general_traj.request.init_rankle_pos = {0, -0.115, 0};
+        general_traj.request.init_rankle_pos = {0, -0.1, 0};
         general_traj.request.init_rankle_orient = {0, 0, 0};
-        general_traj.request.final_rankle_pos = {0, -0.115, 0};
+        general_traj.request.final_rankle_pos = {0, -0.1, 0};
         general_traj.request.final_rankle_orient = {0, 0, 0};
 
         general_traj.request.time = 2;
@@ -87,12 +110,12 @@ public:
 
         traj.request.step_width = 0.0;
         traj.request.alpha = 0.44;
-        traj.request.t_double_support = 0.15;
-        traj.request.t_step = 1;
-        traj.request.step_length = 0.1;
-        traj.request.COM_height = 0.68;
+        traj.request.t_double_support = 0.2;
+        traj.request.t_step = 1.0;
+        traj.request.step_length = 0.35;
+        traj.request.COM_height = 0.65;
         traj.request.step_count = 4;
-        traj.request.ankle_height = 0.025;
+        traj.request.ankle_height = 0.045;
         traj.request.theta = 0.0;
         traj.request.dt = dt;
         result = traj.response.result;
@@ -111,8 +134,8 @@ public:
         io->enableInput(rightForceSensor);
         accelSensor = ioBody->findDevice<AccelerationSensor>("WaistAccelSensor");
         io->enableInput(accelSensor);
-        //gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro"); //SR1
-        gyro = ioBody->findDevice<RateGyroSensor>("gyrometer"); //SurenaIV
+        gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro"); //SR1 & SurenaV
+        //gyro = ioBody->findDevice<RateGyroSensor>("gyrometer"); //SurenaIV
         io->enableInput(gyro);
 
         for(int i=0; i < ioBody->numJoints(); ++i){

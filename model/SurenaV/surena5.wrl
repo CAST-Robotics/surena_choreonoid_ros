@@ -1,0 +1,837 @@
+
+
+#VRML V2.0 utf8
+
+# Simple robot model "Surena 5"
+# This model originates from an SURENA sample robot model.
+# The original model was written by Ichitaro Kohara (YNL, Univ. of Tokyo),
+# Hirohisa Hirukawa (ETL) and Natsuki Miyata (MEL).
+
+PROTO Joint [
+  exposedField     SFVec3f      center              0 0 0
+  exposedField     MFNode       children            []
+  exposedField     MFFloat      llimit              []
+  exposedField     MFFloat      lvlimit             []
+  exposedField     SFRotation   limitOrientation    0 0 1 0
+  exposedField     SFString     name                ""
+  exposedField     SFRotation   rotation            0 0 1 0
+  exposedField     SFVec3f      scale               1 1 1
+  exposedField     SFRotation   scaleOrientation    0 0 1 0
+  exposedField     MFFloat      stiffness           [ 0 0 0 ]
+  exposedField     SFVec3f      translation         0 0 0
+  exposedField     MFFloat      ulimit              []
+  exposedField     MFFloat      uvlimit             []
+  exposedField     SFString     jointType           ""
+  exposedField     SFInt32      jointId             -1
+  exposedField     SFVec3f      jointAxis           0 0 1
+
+  exposedField     SFFloat      gearRatio           1
+  exposedField     SFFloat      rotorInertia        0
+  exposedField     SFFloat      rotorResistor       0
+  exposedField     SFFloat      torqueConst         1
+  exposedField     SFFloat      encoderPulse        1
+]
+{
+  Transform {
+    center           IS center
+    children         IS children
+    rotation         IS rotation
+    scale            IS scale
+    scaleOrientation IS scaleOrientation
+    translation      IS translation
+  }
+}
+
+PROTO Segment [
+  field           SFVec3f     bboxCenter        0 0 0
+  field           SFVec3f     bboxSize          -1 -1 -1
+  exposedField    SFVec3f     centerOfMass      0 0 0
+  exposedField    MFNode      children          [ ]
+  exposedField    SFNode      coord             NULL
+  exposedField    MFNode      displacers        [ ]
+  exposedField    SFFloat     mass              0 
+  exposedField    MFFloat     momentsOfInertia  [ 0 0 0 0 0 0 0 0 0 ]
+  exposedField    SFString    name              ""
+  eventIn         MFNode      addChildren
+  eventIn         MFNode      removeChildren
+]
+{
+  Group {
+    addChildren    IS addChildren
+    bboxCenter     IS bboxCenter
+    bboxSize       IS bboxSize
+    children       IS children
+    removeChildren IS removeChildren
+  }
+}
+
+PROTO Surface [
+ field   SFVec3f bboxCenter 0 0 0
+ field   SFVec3f bboxSize   -1 -1 -1
+ field   MFNode  visual     [ ]
+ field   MFNode  collision  [ ]
+ eventIn MFNode  addChildren
+ eventIn MFNode  removeChildren
+]
+{
+  Group {
+    addChildren    IS addChildren
+    bboxCenter     IS bboxCenter
+    bboxSize       IS bboxSize
+    children       IS visual
+    removeChildren IS removeChildren
+  }
+}
+
+PROTO Humanoid [
+  field           SFVec3f    bboxCenter            0 0 0
+  field           SFVec3f    bboxSize              -1 -1 -1
+  exposedField    SFVec3f    center                0 0 0
+  exposedField    MFNode     humanoidBody          [ ]
+  exposedField    MFString   info                  [ ]
+  exposedField    MFNode     joints                [ ]
+  exposedField    SFString   name                  ""
+  exposedField    SFRotation rotation              0 0 1 0
+  exposedField    SFVec3f    scale                 1 1 1
+  exposedField    SFRotation scaleOrientation      0 0 1 0
+  exposedField    MFNode     segments              [ ]
+  exposedField    MFNode     sites                 [ ]
+  exposedField    SFVec3f    translation           0 0 0
+  exposedField    SFString   version               "1.1"
+  exposedField    MFNode     viewpoints            [ ]
+]
+{
+  Transform {
+    bboxCenter       IS bboxCenter
+    bboxSize         IS bboxSize
+    center           IS center
+    rotation         IS rotation
+    scale            IS scale
+    scaleOrientation IS scaleOrientation
+    translation      IS translation
+    children [
+      Group {
+        children IS viewpoints
+      }
+      Group {
+        children IS humanoidBody 
+      }
+    ]
+  }
+}
+
+
+
+PROTO VisionSensor [
+  exposedField SFVec3f    translation       0 0 0
+  exposedField SFRotation rotation          0 0 1 0
+  exposedField MFNode     children          [ ]
+  exposedField SFFloat    fieldOfView       0.785398
+  exposedField SFString   name              ""
+  exposedField SFFloat    frontClipDistance 0.01
+  exposedField SFFloat    backClipDistance  10.0
+  exposedField SFString   type              "NONE"
+  exposedField SFInt32    sensorId          -1
+  exposedField SFInt32    width             320
+  exposedField SFInt32    height            240
+  exposedField SFFloat    frameRate         30
+]
+{
+  Transform {
+    rotation         IS rotation
+    translation      IS translation
+    children         IS children
+  }
+}
+
+
+PROTO ForceSensor [  
+  exposedField SFVec3f    maxForce    -1 -1 -1
+  exposedField SFVec3f    maxTorque   -1 -1 -1
+  exposedField SFVec3f    translation 0 0 0
+  exposedField SFRotation rotation    0 0 1 0
+  exposedField SFInt32    sensorId    -1
+]
+{
+  Transform {
+    translation IS translation
+    rotation    IS rotation
+  }
+}
+
+PROTO Gyro [
+  exposedField SFVec3f    maxAngularVelocity -1 -1 -1
+  exposedField SFVec3f    translation        0 0 0
+  exposedField SFRotation rotation           0 0 1 0
+  exposedField SFInt32    sensorId           -1
+]
+{
+  Transform {
+    translation IS translation
+    rotation    IS rotation
+  }
+}
+
+PROTO AccelerationSensor [
+  exposedField SFVec3f    maxAcceleration -1 -1 -1
+  exposedField SFVec3f    translation     0 0 0
+  exposedField SFRotation rotation        0 0 1 0
+  exposedField SFInt32    sensorId        -1
+]
+{
+  Transform {
+    translation IS translation
+    rotation    IS rotation
+  }
+}
+
+PROTO PressureSensor [
+  exposedField SFFloat    maxPressure -1
+  exposedField SFVec3f    translation 0 0 0
+  exposedField SFRotation rotation    0 0 1 0
+  exposedField SFInt32    sensorId    -1
+]
+{
+  Transform {
+    translation IS translation
+    rotation    IS rotation
+  }
+}
+
+PROTO PhotoInterrupter [
+  exposedField SFVec3f transmitter 0 0 0
+  exposedField SFVec3f receiver    0 0 0
+  exposedField SFInt32 sensorId    -1
+]
+{
+  Transform{
+    children [
+      Transform{
+        translation IS transmitter
+      }
+      Transform{
+        translation IS receiver
+      }
+    ]
+  }
+}
+
+PROTO CylinderSensorZ [
+    exposedField    SFFloat    maxAngle       -1
+    exposedField    SFFloat    minAngle        0
+    exposedField    MFNode     children        [ ]
+]
+{
+  Transform{
+    rotation 1 0 0 1.5708
+    children [
+      DEF SensorY CylinderSensor{
+        maxAngle IS maxAngle
+        minAngle IS minAngle
+      }
+      DEF AxisY Transform{
+        children [
+          Transform{
+            rotation 1 0 0 -1.5708
+            children IS children
+          }
+        ]
+      }
+    ]
+  }
+  ROUTE SensorY.rotation_changed TO AxisY.set_rotation
+}
+
+PROTO CylinderSensorY [
+    exposedField    SFFloat    maxAngle       -1
+    exposedField    SFFloat    minAngle        0
+    exposedField    MFNode     children        [ ]
+]
+{
+  Transform{
+    rotation 0 1 0 1.5708
+    children [
+      DEF SensorX CylinderSensor{
+        maxAngle IS maxAngle
+        minAngle IS minAngle
+      }
+      DEF AxisX Transform{
+        children [
+          Transform{
+            rotation 0 1 0 -1.5708
+            children IS children
+          }
+        ]
+      }
+    ]
+  }
+  ROUTE SensorX.rotation_changed TO AxisX.set_rotation
+}
+
+PROTO CylinderSensorX [
+    exposedField    SFFloat    maxAngle       -1
+    exposedField    SFFloat    minAngle        0
+    exposedField    MFNode     children        [ ]
+]
+{
+  Transform{
+    rotation 0 0 1 -1.5708
+    children [
+      DEF SensorZ CylinderSensor{
+        maxAngle IS maxAngle
+        minAngle IS minAngle
+      }
+      DEF AxisZ Transform{
+        children [
+          Transform{
+            rotation 0 0 1 1.5708
+            children IS children
+          }
+        ]
+      }
+    ]
+  }
+  ROUTE SensorZ.rotation_changed TO AxisZ.set_rotation
+}
+
+NavigationInfo {
+  avatarSize    0.5
+  headlight     TRUE
+  type  ["EXAMINE", "ANY"]
+}
+
+Background {
+  skyColor 0.4 0.6 0.4
+}
+
+Viewpoint {
+  position    3 0 0.835
+  orientation 0.5770 0.5775 0.5775 2.0935
+}
+
+DEF SURENA5 Humanoid {
+  name "SURENA5"
+
+  humanoidBody [
+
+    DEF Pelvis Joint {
+      jointType "free"
+      translation 0 0 0.90264
+      children [
+        DEF WaistAccelSensor AccelerationSensor { sensorId 0 }
+        DEF WaistGyro Gyro { sensorId 0 }
+        DEF Pelvis_LINK Segment {
+              centerOfMass   0.00818 -0.00179 0.16869
+              mass    13.2473824912366
+              momentsOfInertia    [332984918.15E-09, 307831E-09, 29914617.86E-09,
+                                   307831E-09, 274230277.97E-09, -4492301.25E-09,
+                                   29914617.86E-09, -4492301.25E-09, 134508501.33E-09]
+#children[
+  # Inline {url "meshes/base_link.STL"}
+ #  ]
+   	 children[
+				   Surface {
+				     visual [ Inline { url "meshes/base_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]
+        }
+		
+		
+		
+        #==================== Right Leg ====================
+
+        DEF RLeg_HipY_J1 Joint {
+          jointType "rotate"
+	  jointAxis 0 0 1
+          jointId 0
+	      ulimit []
+          llimit []
+          rotorInertia 1.0
+          rotorResistor 1.0
+          translation   0.016506 -0.1 -0.026
+          children [
+            DEF RLeg_HipY_Link Segment {
+              centerOfMass   -0.07623 0.00014361 -0.090014
+              mass    3.1729
+              momentsOfInertia    [8929283.98E-09, -21205.17E-09, 3833057.75E-09,
+                                  -21205.17E-09, 19584487.55E-09, -1821.5E-09,
+                                  3833057.75E-09, -1821.5E-09, 15246525.80E-09]
+								 
+				
+children[
+            Inline {url "meshes/r_hip_yaw_link.STL"}
+            ]
+			
+           }
+
+            DEF RLeg_HipR_J2 Joint {
+           jointType "rotate"
+	   jointAxis 1 0 0
+          jointId 1
+	  ulimit []
+          llimit []
+          rotorInertia 1.0
+          rotorResistor 1.0
+          translation   -0.002, 0, -0.1113
+          children [
+            DEF RLeg_Hip_Uni_Link Segment {
+              centerOfMass   0.000984969543886728, 0.0247755120757208, -0.00015880471566998
+              mass    2.44028233906507
+              momentsOfInertia    [5217937.18E-09, -56992.30E-09, -6391.68E-09,
+      -56992.30E-09, 3987938.51E-09, 4815.28E-09,
+      -6391.68E-09, 4815.28E-09, 5553044.11E-09]
+children[
+               Inline {url "meshes/r_hip_roll_link.STL"}
+               ]
+                }
+
+
+				
+
+DEF RLeg_HipP_J3 Joint{
+                  jointType "rotate"
+		  jointAxis 0 1 0
+                  jointId 2
+		         ulimit []
+                  llimit []
+                  rotorInertia 1.0
+                  rotorResistor 1.0
+                  translation     0.0 0.0 0.0
+                  children [
+                    DEF RLeg_Hip_Thigh_Link Segment {
+              centerOfMass   -0.00086, 0.01229, -0.18794 
+              mass    5.27157
+              momentsOfInertia    [49460315.63E-09, 127037.57E-09, 827222.84E-09,
+      127037.57E-09, 40774320.32E-09, 4561394.08E-09,
+      827222.84E-09, 4561394.08E-09, 15641537.19E-09]
+children[
+                   Inline {url "meshes/r_hip_pitch_link.STL"}
+                    ]
+
+					
+                    }
+
+                     DEF RLeg_KneeP_J4 Joint{
+                       jointType "rotate"
+		         	jointAxis 0 1 0
+                       jointId 3
+		             	ulimit []
+                       llimit []
+                       rotorInertia 1.0
+                       rotorResistor 1.0
+                       translation     8.9042E-05, -0.002, -0.36004
+                       children [
+                         DEF RLeg_Shank_Link Segment {
+              centerOfMass   0.01649, 0.00164, -0.08690
+              mass    2.23575
+              momentsOfInertia    [32098078.78E-09, -53528.00E-09, -355923.32E-09,
+      -53528.00E-09, 30953084.53E-09, -465088.29E-09,
+      -355923.32E-09, -465088.29E-09, 5703262.33E-09]
+#children[
+                          # Inline {url "parts/ShankR_SURENA4.wrl"}
+                             # ]
+							 children[
+				   Surface {
+				     visual [ Inline { url "meshes/r_knee_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]	
+                              }
+
+                          DEF RLeg_AnkleP_J5 Joint{
+                            jointType "rotate"
+			                jointAxis 0 1 0
+                            jointId 4
+				            ulimit []
+                            llimit []
+                            rotorInertia 1.0
+                            rotorResistor 1.0
+                            translation     0.00099741, 0, -0.35001
+                            children [
+                            DEF RLeg_Ankle_Uni_Link Segment {
+              centerOfMass   -0.03478, 0.00111, -0.00042
+              mass    0.18834
+              momentsOfInertia    [29449.50E-09, 7347.02E-09, -3099.27E-09,
+      7347.02E-09, 363852.27E-09, 2750.26E-09,
+      -3099.27E-09, 2750.26E-09, 359077.66E-09]
+children[
+				      
+   Surface {
+				     visual [ Inline { url "meshes/r_ankle_pitch_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+                           
+                              ]
+							  
+						  
+							  
+                              }
+
+                             DEF RLeg_AnkleR_J6 Joint {
+                               jointType "rotate"
+				               jointAxis 1 0 0
+                               jointId 5
+				               ulimit []
+                               llimit []
+                               rotorInertia 1.0
+                               rotorResistor 1.0
+                               translation     0, 0, 5.60144157897291E-05
+                               children [
+                               DEF RLeg_Foot_Link Segment {
+              centerOfMass   0.0261782638901839, 0.000138793078492322, -0.040153711347177
+              mass    1.80660460486529
+              momentsOfInertia    [3491091.22E-09, -12700.75E-09, -370501.43E-09,
+      -12700.75E-09, 8640458.28E-09, 1060.27E-09,
+      -370501.43E-09, 1060.27E-09, 11463586.62E-09]
+							  #children[
+                          # Inline {url "parts/FootR_SURENA4.wrl"}
+                              #]
+							    children[
+								 DEF RightAnkleForceSensor ForceSensor {
+					 translation 0 0 0
+					 rotation 1 0 0 0
+					 sensorId 0
+
+}
+					 
+	    DEF RightFootAccelSensor AccelerationSensor { sensorId 1 }
+        DEF RightFootgyrometer Gyro { sensorId 1 }
+				   Surface {
+				     visual [ Inline { url "meshes/r_ankle_roll_link.STL" } ]
+				     collision [
+				      Transform {
+					
+					children [
+					    Inline { url "meshes/r_ankle_roll_link.STL" } 
+					]
+				      }
+				     ]
+				   }
+				   ]	
+							  
+							  
+							 #
+                                } # Segment RLEG_LINK6
+                              ]
+                            } # Joint RLEG_ANKLE_R
+                          ]
+                        } # Joint RLEG_ANKLE_P
+                      ]
+                    } # Joint RLEG_KNEE
+                  ]
+                } # Joint RLEG_HIP_Y
+              ]
+            } # Joint RLEG_HIP_P
+          ]
+        } # Joint RLEG_HIP_R
+
+	  #==================== Left Leg ====================
+
+          DEF LLeg_HipY_J1 Joint{
+          jointType "rotate"
+	      jointAxis 0 0 1
+          jointId 6
+		  ulimit []
+          llimit []
+          rotorInertia 1.0
+          rotorResistor 1.0
+          translation   0.016506, 0.1 ,-0.026
+          children [
+            DEF LLeg_HipY_Link Segment {
+              centerOfMass   -0.07571, 0.00009, -0.09
+              mass    3.1707
+              momentsOfInertia    [8925306.69E-09, -14981.60E-09, 3799016.92E-09,
+      -14981.60E-09, 19351339.17E-09, 1589.68E-09,
+      3799016.92E-09, 1589.68E-09, 15015860.89E-09]
+#children[
+      #      Inline {url "parts/HipL_SURENA4.wrl"}
+        #    ]
+			
+			 children[
+				   Surface {
+				     visual [ Inline { url "meshes/l_hip_yaw_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]	
+			
+			
+			
+            }
+
+            DEF LLeg_HipR_J2 Joint {
+          jointType "rotate"
+	      jointAxis 1 0 0
+          jointId 7
+		  ulimit []
+          llimit []
+          rotorInertia 1.0
+          rotorResistor 1.0
+          translation   -0.002, 0, -0.1113
+          children [
+            DEF LLeg_Hip_Uni_Link Segment {
+              centerOfMass   0.00085, -0.02478, 0.00015
+              mass    2.43805
+              momentsOfInertia    [5214396.90E-09, 53098.89E-09, -8574.92E-09,
+      53098.89E-09, 3985605E-09, 4482.24E-09,
+      -8574.92E-09, 4482.24E-09, 5554247.3E-09]
+#children[
+             #  Inline {url "parts/HipL_Uni_SURENA4.wrl"}
+               #]
+			    children[
+				   Surface {
+				     visual [ Inline { url "meshes/l_hip_roll_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]
+                }
+				
+						
+                DEF LLeg_HipP_J3 Joint{
+                  jointType "rotate"
+				  jointAxis 0 1 0
+                  jointId 8
+				  ulimit []
+                  llimit []
+                  rotorInertia 1.0
+                  rotorResistor 1.0
+                  translation     0.0 0.0 0.0
+                  children [
+                    DEF LLeg_Hip_Thigh_Link Segment {
+              centerOfMass   -0.00086, -0.013, -0.18504
+              mass    5.61487
+              momentsOfInertia    [50456343.28E-09, -139977.67E-09, 787977.57E-09,
+      -139977.67E-09, 42055621.32E-09, -4073599.3E-09,
+      787977.57E-09,  -4073599.3E-09, 15900319.78E-09]
+#children[
+                  # Inline {url "parts/ThighL_SURENA4.wrl"}
+                    #]
+					 children[
+				   Surface {
+				     visual [ Inline { url "meshes/l_hip_pitch_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]	
+                    }
+
+                     DEF LLeg_KneeP_J4 Joint{
+                       jointType "rotate"
+				       jointAxis 0 1 0
+                       jointId 9
+				       ulimit []
+                       llimit []
+                       rotorInertia 1.0
+                       rotorResistor 1.0
+                       translation     0.00103757953495294, 0, -0.35988271232031
+                       children [
+                         DEF LLeg_Shank_Link Segment {
+              centerOfMass   0.01575 , -0.00162, -0.08673
+              mass    2.23418
+              momentsOfInertia    [31992216.05E-09, 60131.35E-09, -310433.24E-09,
+      60131.35E-09, 30880490.34E-09, 438008.7E-09,
+      -310433.24E-09, 438008.7E-09, 5724563.57E-09]
+#children[
+          #                 Inline {url "parts/ShankL_SURENA4.wrl"}
+                #              ]
+					 children[
+				   Surface {
+				     visual [ Inline { url "meshes/l_knee_link.STL" } ]
+				     collision [
+				      Transform {
+					translation -0.0125 -0.0135 -0.0202
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]
+                         }
+				  
+
+                          DEF LLeg_AnkleP_J5 Joint{
+                            jointType "rotate"
+				            jointAxis 0 1 0
+							jointId 10
+				            ulimit []
+                            llimit []
+                            rotorInertia 1.0
+                            rotorResistor 1.0
+                            translation     0, 0, -0.349994948601546
+                            children [
+                            DEF LLeg_Ankle_Uni_Link Segment {
+              centerOfMass   -0.003478, -0.00112, -0.00042
+              mass    0.18834
+              momentsOfInertia    [29444.91E-09, -7241.52E-09, -3110.24E-09,
+     -7241.52E-09, 363885.79E-09, -2909.32E-09,
+      -3110.24E-09, -2909.32E-09, 359039.5E-09 ]
+                        
+							  
+							  
+							   children[
+				   Surface {
+				     visual [ Inline { url "meshes/l_ankle_pitch_link.STL" } ]
+				     collision [
+				      Transform {
+					
+					children [
+					  Shape { geometry Box { size 0.086 0.057 0.002 } }
+					]
+				      }
+				     ]
+				   }
+				   ]	
+							  
+							  
+                              }
+
+                             DEF LLeg_AnkleR_J6 Joint {
+                               jointType "rotate"
+			                   jointAxis 1 0 0
+                               jointId 11
+			                	ulimit []
+                               llimit []
+                               rotorInertia 1.0
+                               rotorResistor 1.0
+                               translation     0.0 0.0 0
+                               children [
+                               DEF LLeg_Foot_Link Segment {
+              centerOfMass   0.02617, 0.00013891, -0.040175
+              mass    1.8051
+              momentsOfInertia    [3487009E-09 -12699.09E-09 -370914.50E-09
+                                 -12699.09E-09 8639023.92E-09 1065.7E-09
+                                 -370914.50E-09 1065.7E-09 11460357.2E-09]
+								
+                      
+                         
+                              
+#children[
+                             #   Inline {url "parts/FootL_SURENA4.wrl"}
+                              #]
+				children[
+				       DEF LeftAnkleForceSensor ForceSensor {
+				       translation 0 0 0
+				       rotation 1 0 0 0
+        				      sensorId 1
+            }
+			
+			
+			 DEF LeftFootAccelSensor AccelerationSensor { sensorId 2 }
+                         DEF LeftFootgyrometer Gyro { sensorId 2 }
+				   Surface {
+				     visual [ Inline { url "meshes/l_ankle_roll_link.STL" } ]
+				     collision [
+				      Transform {
+					
+					children [
+					    Inline { url "meshes/l_ankle_roll_link.STL" } 
+					]
+				      }
+				     ]
+				   }
+				   ]	
+							  
+							  
+							  
+                                } # Segment LLEG_LINK6
+                              ]
+                            } # Joint LLEG_ANKLE_R
+                          ]
+                        } # Joint LLEG_ANKLE_P
+                      ]
+                    } # Joint LLEG_KNEE
+                  ]
+                } # Joint LLEG_HIP_P
+              ]
+            } # Joint LLEG_HIP_R
+          ]
+        } # Joint LLEG_HIP_Y
+
+	  
+	  
+	  #lower Body finished
+	]	
+		
+    } # Joint WAIST
+  ]# humanoidbody
+
+
+  # List up all the joints' name you use
+  joints [
+    USE Pelvis,
+    USE RLeg_HipY_J1,
+    USE RLeg_HipR_J2,
+    USE RLeg_HipP_J3,
+    USE RLeg_KneeP_J4,
+    USE RLeg_AnkleP_J5,
+    USE RLeg_AnkleR_J6,
+    
+    USE LLeg_HipY_J1,
+    USE LLeg_HipR_J2,
+    USE LLeg_HipP_J3,
+    USE LLeg_KneeP_J4,
+    USE LLeg_AnkleP_J5,
+    USE LLeg_AnkleR_J6
+  ]
+
+  # List up all the segments' name you use
+  segments [
+    USE Pelvis_LINK,
+	USE RLeg_HipY_Link,
+    USE RLeg_Hip_Uni_Link,
+    USE RLeg_Hip_Thigh_Link,
+    USE RLeg_Shank_Link,
+    USE RLeg_Ankle_Uni_Link,
+    USE RLeg_Foot_Link,
+    USE LLeg_HipY_Link,
+    USE LLeg_Hip_Uni_Link,
+    USE LLeg_Hip_Thigh_Link,
+    USE LLeg_Shank_Link,
+    USE LLeg_Ankle_Uni_Link,
+    USE LLeg_Foot_Link
+
+  ]
+}# def humanoid
+
