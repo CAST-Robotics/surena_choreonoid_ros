@@ -21,9 +21,15 @@ class EKFEstimator {
 
         void predict();
         void predictState();
+        void updateLc(Matrix3d rot);
+        void updateQc();
+        void updateFc(Matrix3d rot);
+        void predictCov();
         
         void update();
         void updateState();
+
+        Matrix3d skewSym(const Vector3d &vec);
 
     
     private:
@@ -31,7 +37,7 @@ class EKFEstimator {
         Vector3d GRightFootPos_;
         Vector3d GBasePos_;
         Vector3d GBaseVel_;
-        Quaterniond GBaseAtitude_;
+        Quaterniond GBaseQuat_;
         Matrix3d GBaseRot_;
 
 
@@ -44,12 +50,29 @@ class EKFEstimator {
         VectorXd xPrior_;
         VectorXd xPosterior_;
 
+        MatrixXd P_;
+
+        MatrixXd Lc_;
+        MatrixXd Qc_;
+        MatrixXd Fc_;
+        MatrixXd Fk_;
+        MatrixXd Qk_;
+
+        double wf_;
+        double ww_;
+        double wp_r_;
+        double wp_l_;
+        double wbf_;
+        double wbw_;
+
         vector<double> Config_;
         vector<double> ConfigDot_;
 
         Vector3d Gravity_;
 
         int statesDim_;
+        int statesErrDim_;
+        int processNoiseDim_;
         int rvqStatesDim_;
         double dt_;
 
