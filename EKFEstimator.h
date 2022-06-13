@@ -18,6 +18,10 @@ class EKFEstimator {
         EKFEstimator();
         ~EKFEstimator();
         void setSensorData(Vector3d acc, Vector3d gyro);
+        void setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic);
+
+        void setState2prior();
+        void setState2posterior();
 
         void predict();
         void predictState();
@@ -27,7 +31,10 @@ class EKFEstimator {
         void predictCov();
         
         void update();
-        void updateState();
+        void updateRk();
+        void updateHk();
+
+        void runFilter();
 
         Matrix3d skewSym(const Vector3d &vec);
 
@@ -35,11 +42,15 @@ class EKFEstimator {
     private:
         Vector3d GLeftFootPos_;
         Vector3d GRightFootPos_;
+        Vector3d BLeftFootPos_;
+        Vector3d BRightFootPos_;
         Vector3d GBasePos_;
         Vector3d GBaseVel_;
         Quaterniond GBaseQuat_;
         Matrix3d GBaseRot_;
 
+        Vector3d BRFootMeasured_;
+        Vector3d BLFootMeasured_;
 
         Vector3d BAcc_;
         Vector3d BGyro_;
@@ -49,6 +60,10 @@ class EKFEstimator {
 
         VectorXd xPrior_;
         VectorXd xPosterior_;
+        VectorXd z_;
+        VectorXd y_;
+        VectorXd deltaX_;
+
 
         MatrixXd P_;
 
@@ -58,12 +73,19 @@ class EKFEstimator {
         MatrixXd Fk_;
         MatrixXd Qk_;
 
+        MatrixXd Rk_;
+        MatrixXd Hk_;
+        MatrixXd Sk_;
+        MatrixXd Kk_;
+
         double wf_;
         double ww_;
         double wp_r_;
         double wp_l_;
         double wbf_;
         double wbw_;
+        double np_r_;
+        double np_l_;
 
         vector<double> Config_;
         vector<double> ConfigDot_;
@@ -74,6 +96,8 @@ class EKFEstimator {
         int statesErrDim_;
         int processNoiseDim_;
         int rvqStatesDim_;
+
+        int measurmentDim_;
         double dt_;
 
 };
