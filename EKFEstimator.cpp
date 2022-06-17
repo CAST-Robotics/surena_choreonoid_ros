@@ -1,6 +1,8 @@
 #include "EKFEstimator.h"
 
-explicit EKFEstimator::EKFEstimator() {
+EKFEstimator::EKFEstimator() {
+
+    Gravity_ = Vector3d(0, 0, 9.81);
     Matrix3d rotation_matrix = Matrix3d::Identity();
     GBaseRot_ = rotation_matrix;
     GBaseQuat_ = Quaterniond(rotation_matrix);
@@ -39,7 +41,8 @@ explicit EKFEstimator::EKFEstimator() {
     z_ = MatrixXd::Zero(measurmentDim_, 1);
     deltaX_ = MatrixXd::Zero(statesDim_, 1);
 
-    P_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    initStateVar_ = 50;
+    P_ = initStateVar_ * MatrixXd::Identity(statesErrDim_, statesErrDim_);
     
     Lc_ = MatrixXd::Zero(statesErrDim_, processNoiseDim_);
     Qc_ = MatrixXd::Zero(processNoiseDim_, processNoiseDim_);
@@ -63,7 +66,7 @@ explicit EKFEstimator::EKFEstimator() {
     np_l_ = 0.01;
     updateQc();
     
-    dt_ = 0.005;
+    dt_ = 0.002;
 }
 
 EKFEstimator::~EKFEstimator() {
@@ -71,14 +74,15 @@ EKFEstimator::~EKFEstimator() {
 }
 
 void EKFEstimator::setSensorData(Vector3d acc, Vector3d gyro){
-
+    BAcc_ = acc;
+    BGyro_ = gyro;
 }
 
 void EKFEstimator::setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic){
     BRFootMeasured_ = r_kynematic;
     BLFootMeasured_ = l_kynematic;
     z_.segment(0, BRFootMeasured_.size()) = r_kynematic;
-    z_.segment(BRFootMeasured_.size(), BRFootMeasured_.size() + BLFootMeasured_.size()) = l_kynematic;
+    z_.segment(BRFootMeasured_.size(), BLFootMeasured_.size()) = l_kynematic;
 }
 
 void EKFEstimator::setState2prior(){
@@ -92,9 +96,9 @@ void EKFEstimator::setState2prior(){
     GBaseRot_ = GBaseQuat_.toRotationMatrix();
 
     GRightFootPos_ = xPrior_.segment(rvqStatesDim_, GRightFootPos_.size());
-    GLeftFootPos_ = xPrior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size());
-    BAccBias_ = xPrior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size());
-    BGyroBias_ = xPrior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size());
+    GLeftFootPos_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size(), GLeftFootPos_.size());
+    BAccBias_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size(), BAccBias_.size());
+    BGyroBias_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size(), BGyroBias_.size());
 }
 
 void EKFEstimator::setState2posterior(){
@@ -108,24 +112,23 @@ void EKFEstimator::setState2posterior(){
     GBaseRot_ = GBaseQuat_.toRotationMatrix();
 
     GRightFootPos_ = xPosterior_.segment(rvqStatesDim_, GRightFootPos_.size());
-    GLeftFootPos_ = xPosterior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size());
-    BAccBias_ = xPosterior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size());
-    BGyroBias_ = xPosterior_.segment(rvqStatesDim_, GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size());
+    GLeftFootPos_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size(), GLeftFootPos_.size());
+    BAccBias_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size(), BAccBias_.size());
+    BGyroBias_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size(), BGyroBias_.size());
 }
 
 void EKFEstimator::predictState(){
-    
-    this->setState2posterior();
 
     // remove bias from IMU data
     Vector3d BAcc_bar = BAcc_ - BAccBias_;
     Vector3d BGyro_bar = BGyro_ - BGyroBias_;
     // find orientation change between time steps (initialize quaternion with rotation vector)
-    Quaterniond delta_omega = Quaterniond(BGyro_bar * dt_);
+    AngleAxisd delta_gyro((BGyro_bar * dt_).norm(), (BGyro_bar * dt_).normalized());
+    Quaterniond delta_omega = Quaterniond(delta_gyro);
 
     // predict position and velocity
-    xPrior_.segment(0,GBasePos_.size()) = GBasePos_ + dt_ * GBaseVel_ + (pow(dt_, 2) / 2) * (GBaseRot_ * BAcc_bar + Gravity_);
-    xPrior_.segment(GBasePos_.size(), GBaseVel_.size()) = GBaseVel_ + dt_ * (GBaseRot_ * BAcc_bar + Gravity_);
+    xPrior_.segment(0,GBasePos_.size()) = GBasePos_ + dt_ * GBaseVel_ + (pow(dt_, 2) / 2) * (GBaseRot_ * BAcc_bar - Gravity_);
+    xPrior_.segment(GBasePos_.size(), GBaseVel_.size()) = GBaseVel_ + dt_ * (GBaseRot_ * BAcc_bar - Gravity_);
     // predict orientation
     Quaterniond predicted_q = delta_omega * GBaseQuat_;
 
@@ -135,7 +138,8 @@ void EKFEstimator::predictState(){
     xPrior_(GBasePos_.size() + GBaseVel_.size()  + 3) = predicted_q.w();
 
     // predict foot positions & biases
-    xPrior_(rvqStatesDim_, statesDim_ - rvqStatesDim_) = xPosterior_(rvqStatesDim_, statesDim_ - rvqStatesDim_);
+    xPrior_.segment(rvqStatesDim_, statesDim_ - rvqStatesDim_) = xPosterior_.segment(rvqStatesDim_, statesDim_ - rvqStatesDim_);
+    //this->setState2prior();
 }
 
 void EKFEstimator::updateLc(Matrix3d rot) {
@@ -185,6 +189,7 @@ void EKFEstimator::predictCov() {
 void EKFEstimator::predict() {
     this->predictState();
     this->predictCov();
+    this->setState2prior();
 }
 
 void EKFEstimator::updateRk() {
@@ -208,9 +213,6 @@ void EKFEstimator::updateHk() {
 void EKFEstimator::update() {
     this->updateRk();
     this->updateHk();
-
-    this->setState2prior();
-
     Sk_ = Hk_ * P_ * Hk_.transpose() + Rk_;
 
     // calculate Kalman gain
@@ -229,8 +231,8 @@ void EKFEstimator::update() {
     delta_phi(0) = xPosterior_(GBasePos_.size() + GBaseVel_.size());
     delta_phi(1) = xPosterior_(GBasePos_.size() + GBaseVel_.size() + 1);
     delta_phi(2) = xPosterior_(GBasePos_.size() + GBaseVel_.size() + 2);
-
-    Quaterniond delta_quat = Quaterniond(delta_phi);
+    AngleAxisd delta_rot(delta_phi.norm(), delta_phi.normalized());
+    Quaterniond delta_quat = Quaterniond(delta_rot);
     Quaterniond q_posterior = delta_quat * GBaseQuat_;
     xPosterior_(GBasePos_.size() + GBaseVel_.size()) = q_posterior.x();
     xPosterior_(GBasePos_.size() + GBaseVel_.size() + 1) = q_posterior.y();
@@ -239,9 +241,24 @@ void EKFEstimator::update() {
 
     // update covariance
     P_ = (MatrixXd::Identity(statesErrDim_, statesErrDim_) - Kk_ * Hk_) * P_;
+
+    this->setState2posterior();
 }
 
-void EKFEstimator::runFilter(){
+void EKFEstimator::runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector3d lfmeasured) {
+    this->setSensorData(acc, gyro);
     this->predict();
+    cout << GBasePos_(0) << ", " << GBasePos_(1) << ", " << GBasePos_(2) << ", ";
+    cout << GBaseVel_(0) << ", " << GBaseVel_(1) << ", " << GBaseVel_(2) << ", ";
+    cout << GBaseQuat_.x() << ", " << GBaseQuat_.y() << ", " << GBaseQuat_.z() << ", " << GBaseQuat_.w() << endl;
+    setMeasuredData(rfmeasured, lfmeasured);
     this->update();
 }
+
+// int main() {
+//     EKFEstimator estimator;
+//     Vector3d acc(0, 0, 9.9);
+//     Vector3d gyro(0, 0, 0);
+//     estimator.runFilter(acc, gyro, gyro, gyro);
+//     return 0;
+// }

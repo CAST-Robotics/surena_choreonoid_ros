@@ -34,7 +34,7 @@ class EKFEstimator {
         void updateRk();
         void updateHk();
 
-        void runFilter();
+        void runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector3d lfmeasured);
 
         Matrix3d skewSym(const Vector3d &vec);
 
@@ -86,6 +86,8 @@ class EKFEstimator {
         double wbw_;
         double np_r_;
         double np_l_;
+
+        double initStateVar_;
 
         vector<double> Config_;
         vector<double> ConfigDot_;
