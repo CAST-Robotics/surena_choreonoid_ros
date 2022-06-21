@@ -1,9 +1,8 @@
 items: 
   id: 0
-  name: "RootItem"
+  name: "Root"
   plugin: Base
   class: RootItem
-  is_builtin_item: true
   children: 
     - 
       id: 1
@@ -11,8 +10,8 @@ items:
       plugin: Body
       class: WorldItem
       data: 
-        collision_detection: false
-        collision_detector: AISTCollisionDetector
+        collisionDetection: false
+        collisionDetector: AISTCollisionDetector
         default_material_table_file: "${SHARE}/default/materials.yaml"
       children: 
         - 
@@ -47,7 +46,7 @@ items:
           plugin: Body
           class: AISTSimulatorItem
           data: 
-            timeStep: 0.001
+            timeStep: 0.002
             realtimeSync: true
             recording: "full"
             timeRangeMode: "Unlimited"
@@ -58,10 +57,9 @@ items:
             controllerThreads: true
             recordCollisionData: false
             controllerOptions: ""
-            scene_view_edit_mode_blocking: false
             dynamicsMode: "Forward dynamics"
             integrationMode: "Runge Kutta"
-            gravity: [ 0, 0, -9.80665 ]
+            gravity: [ 0, 0, -9.81 ]
             min_friction_coefficient: 0
             max_friction_coefficient: 100
             cullingThresh: 0.005
@@ -120,9 +118,10 @@ items:
               data: 
                 isNoDelayMode: false
                 controllerOptions: ""
-                base_directory: "Controller directory"
+                baseDirectory: "Controller directory"
                 reloading: false
-                export_symbols: false
+                exportSymbols: false
+                isOldTargetVariableMode: false
             - 
               id: 6
               name: "SensorVisualizer"
@@ -134,21 +133,7 @@ items:
                     class: ForceSensorVisualizerItem
                     name: ForceSensor
                     is_checked: true
-                    ratio: 0.01
-                    threshold: 0.1
-                    offset: [ 0, 0, 0 ]
-                  - 
-                    class: AccelerationSensorVisualizerItem
-                    name: AccelerationSensor
-                    ratio: 0.1
-                    threshold: 0.05
-                    offset: [ 0, 0, -9.8 ]
-                  - 
-                    class: RateGyroSensorVisualizerItem
-                    name: RateGyro
-                    ratio: 0.4
-                    threshold: 0.01
-                    offset: [ 0, 0, 0 ]
+                    visualRatio: 0.002
 views: 
   - 
     id: 0
@@ -164,13 +149,14 @@ views:
       expanded: [ 1, 4, 5, 6 ]
   - 
     id: 2
+    name: "Location"
     plugin: Base
     class: LocationView
     mounted: true
     state: 
       show_rpy: true
       unique_rpy: false
-      show_quaternion: false
+      show_quoternion: false
       show_rotation_matrix: false
       coordinate: world
   - 
@@ -204,10 +190,9 @@ views:
       floorGrid: true
       floorGridSpan: 10
       floorGridInterval: 0.5
-      xzGrid: false
       xzGridSpan: 10
       xzGridInterval: 0.5
-      yzGrid: false
+      xzGrid: false
       yzGridSpan: 10
       yzGridInterval: 0.5
       texture: true
@@ -228,7 +213,7 @@ views:
           far: 200
           eye: [ 3, 1.5, 1.2 ]
           direction: [ -0.880451, -0.440225, -0.17609 ]
-          up: [ -0.1575, -0.0787497, 0.984374 ]
+          up: [ -0.1575, -0.0787495, 0.984374 ]
         - 
           camera: [ System, Orthographic ]
           orthoHeight: 20
@@ -242,6 +227,12 @@ views:
   - 
     id: 5
     plugin: Body
+    class: BodyLinkView
+    state: 
+      showRotationMatrix: false
+  - 
+    id: 6
+    plugin: Body
     class: JointDisplacementView
     mounted: true
     state: 
@@ -252,9 +243,9 @@ views:
       show_sliders: true
       show_dials: false
       show_phases: true
-      limit_ranges: false
   - 
-    id: 6
+    id: 7
+    name: "Links / Devices"
     plugin: Body
     class: LinkDeviceListView
     mounted: true
@@ -262,7 +253,8 @@ views:
       element_type: all
       listingMode: list
   - 
-    id: 7
+    id: 8
+    name: "Link Position"
     plugin: Body
     class: LinkPositionView
     mounted: true
@@ -271,30 +263,31 @@ views:
       preferred_coordinate_mode: base
       show_rpy: true
       unique_rpy: false
-      show_quaternion: false
+      show_quoternion: false
       show_rotation_matrix: false
       target_link_type: ik_link
   - 
-    id: 8
+    id: 9
+    name: "Link Properties"
     plugin: Body
     class: LinkPropertyView
     mounted: true
   - 
-    id: 9
+    id: 10
     plugin: Python
     class: PythonConsoleView
     mounted: true
 toolbars: 
   "TimeBar": 
-    min_time: 0
-    max_time: 30
-    frame_rate: 1000
-    playback_frame_rate: 60
-    idle_loop_driven_mode: false
-    current_time: 0
-    playback_speed_ratio: 1
-    sync_to_ongoing_updates: true
-    auto_expansion: true
+    minTime: 0
+    maxTime: 30
+    frameRate: 1000
+    playbackFrameRate: 60
+    idleLoopDrivenMode: false
+    currentTime: 0
+    speedScale: 1
+    syncToOngoingUpdates: true
+    autoExpansion: true
   "LeggedBodyBar": 
     stanceWidth: 0.15
   "KinematicsBar": 
@@ -307,7 +300,42 @@ toolbars:
     snapDistance: 0.025
     penetrationBlockDepth: 0.0005
     lazyCollisionDetectionMode: true
+  "BodyMotionGenerationBar": 
+    autoGenerationForNewBody: true
+    balancer: false
+    autoGeneration: false
+    timeScaleRatio: 1
+    preInitialDuration: 1
+    postFinalDuration: 1
+    onlyTimeBarRange: false
+    makeNewBodyItem: true
+    stealthyStepMode: true
+    stealthyHeightRatioThresh: 2
+    flatLiftingHeight: 0.005
+    flatLandingHeight: 0.005
+    impactReductionHeight: 0.005
+    impactReductionTime: 0.04
+    autoZmp: true
+    minZmpTransitionTime: 0.1
+    zmpCenteringTimeThresh: 0.03
+    zmpTimeMarginBeforeLiftingSpin: 0
+    zmpMaxDistanceFromCenter: 0.02
+    allLinkPositions: false
+    lipSyncMix: false
+    timeToStartBalancer: 0
+    balancerIterations: 2
+    plainBalancerMode: false
+    boundaryConditionType: position
+    boundarySmootherType: quintic
+    boundarySmootherTime: 0.5
+    boundaryCmAdjustment: false
+    boundaryCmAdjustmentTime: 1
+    waistHeightRelaxation: false
+    gravity: 9.8
+    dynamicsTimeRatio: 1
 Body: 
+  "BodyMotionEngine": 
+    updateJointVelocities: false
   "BodySelectionManager": 
     current_body_item: 4
     current_link: "Pelvis"
@@ -344,41 +372,41 @@ viewAreas:
     contents: 
       type: splitter
       orientation: horizontal
-      sizes: [ 1400, 444 ]
+      sizes: [ 990, 314 ]
       children: 
         - 
           type: splitter
           orientation: horizontal
-          sizes: [ 362, 1034 ]
+          sizes: [ 256, 730 ]
           children: 
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 450, 448 ]
+              sizes: [ 295, 293 ]
               children: 
                 - 
                   type: pane
                   views: [ 1 ]
                 - 
                   type: pane
-                  views: [ 0, 8 ]
+                  views: [ 0, 9 ]
                   current: 0
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 674, 224 ]
+              sizes: [ 441, 147 ]
               children: 
                 - 
                   type: pane
                   views: [ 4 ]
                 - 
                   type: pane
-                  views: [ 3, 9 ]
+                  views: [ 3, 10 ]
                   current: 3
         - 
           type: splitter
           orientation: vertical
-          sizes: [ 269, 629 ]
+          sizes: [ 186, 402 ]
           children: 
             - 
               type: pane
@@ -386,15 +414,15 @@ viewAreas:
             - 
               type: splitter
               orientation: vertical
-              sizes: [ 386, 239 ]
+              sizes: [ 266, 132 ]
               children: 
                 - 
                   type: pane
-                  views: [ 7 ]
+                  views: [ 8 ]
                 - 
                   type: pane
-                  views: [ 6, 5 ]
-                  current: 5
+                  views: [ 7, 6 ]
+                  current: 6
 layoutOfToolBars: 
   rows: 
     - 
