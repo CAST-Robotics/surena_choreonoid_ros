@@ -1,0 +1,13 @@
+init_dsp_duration : 0.5
+ssp_duration : 1.0
+dsp_duration : 0.1
+final_dsp_duration : 0.5
+footsteps:
+  [
+    [0.0, 0.1, 0.0],
+    [0.0, -0.1, 0.0],
+    [0.15, 0.1, 0.0],
+    [0.3, -0.1, 0.0],
+    [0.45, 0.1, 0.0],
+    [0.45, -0.1, 0.0]
+  ]

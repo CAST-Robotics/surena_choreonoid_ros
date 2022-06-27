@@ -12,6 +12,7 @@ PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_he
          pow(dt_, 2) / 2,
          dt_;
     c_ << 1, 0, -(robotHeight_ / g_);
+    
     Q_ = 1 * MatrixXd::Identity(1, 1);
     R_ = pow(10, -6) * MatrixXd::Identity(1, 1);
 
@@ -19,20 +20,18 @@ PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_he
     P_ = MatrixXd::Zero(4, 4);
     Gd_ = VectorXd::Zero(N_);
 
-    error_ = 0;
+    error_ = Vector3d(0, 0, 0);
 
-    ZMP_ = VectorXd::Zero(800 + N_);
-    x_ = new Vector3d[800];
+    string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
+    ZMPPlanner_ = new ZMPPlanner(dt_, config_path);
+    ZMPPlanner_->planInitialDSPZMP();
+    ZMPPlanner_->planStepsZMP();
+    ZMPPlanner_->planFinalDSPZMP();
+    int traj_size = ZMPPlanner_->getTrajSize();
+    x_ = new Vector3d[traj_size];
+    y_ = new Vector3d[traj_size];
     x_[0] = x0_;
-    for(int i=200; i < 400; i++) {
-        ZMP_[i] = 1.0;
-    }
-    for(int i=400; i < 600; i++) {
-        ZMP_[i] = -1.0;
-    }
-    for(int i=600; i < 800 + N_; i++) {
-        ZMP_[i] = 1.0;
-    }
+    y_[0] = x0_;
 }
 
 void PreviewTraj::setDt(double dt){
@@ -73,30 +72,28 @@ void PreviewTraj::computeWeight(){
         Gd_(i) = ((R_ + B_bar.transpose() * P_ * B_bar).inverse() * B_bar.transpose() * X_bar)(0);
         X_bar = Ac_bar.transpose() * X_bar;
     }
-
-    // K_ = (R_ + b_.transpose() * P_ * b_).inverse() * b_.transpose() * P_ * A_;
-    // for(int i=0; i<N_; i++){
-    //     Matrix3d Ab = (A_ - b_ * K_).transpose();
-    //     EigenSolver<Matrix3d> es(Ab);
-    //     Matrix3d D = es.pseudoEigenvalueMatrix();
-    //     Matrix3d V = es.pseudoEigenvectors();
-    //     D << pow(D(0, 0), dt_ * i), 0, 0,
-    //          0, pow(D(1, 1), dt_ * i), 0,
-    //          0, 0, pow(D(2, 2), dt_ * i);
-    //     Ab = V * D * V.inverse();
-    //     f_[i] = ((R_ + b_.transpose() * P_ * b_).inverse() * b_.transpose() * (Ab) * c_.transpose() * Q_)(0);
-    // }
 }
 
 void PreviewTraj::computeTraj(){
 
-    for(int i=1; i<800; i++){
-        error_ += c_ * x_[i - 1] - ZMP_[i - 1];
-        double uk = ((-Gl_ * error_ - Gx_ * x_[i - 1]) - Gd_.transpose() * ZMP_.block(i, 0, N_, 1))(0);
-        x_[i] = A_ * x_[i - 1] + uk * b_;
-        //x_[i](2) = c_ * x_[i - 1];
+    for(int i=1; i<ZMPPlanner_->getTrajSize(); i++){
+
+        error_(0) += c_ * x_[i - 1] - ZMPPlanner_->getZMP(i - 1)(0);
+        error_(1) += c_ * y_[i - 1] - ZMPPlanner_->getZMP(i - 1)(1);
+
+        Vector3d preview_u(0, 0, 0);
+        for(int j=0; j<N_; j++){
+            preview_u += double(Gd_(j)) * (ZMPPlanner_->getZMP(i + j));
+        }
+        
+        double ux = ((-Gl_ * error_(0) - Gx_ * x_[i - 1])(0) - preview_u(0));
+        double uy = ((-Gl_ * error_(1) - Gx_ * y_[i - 1])(0) - preview_u(1));
+        x_[i] = A_ * x_[i - 1] + ux * b_;
+        y_[i] = A_ * y_[i - 1] + uy * b_;
+
         double p = c_ * x_[i - 1];
-        cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", " << ZMP_[i] << endl;
+        cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", ";
+        p = c_ * y_[i - 1];
+        cout << y_[i](0) << ", " << y_[i](1) << ", " << y_[i](2) << ", " << p << endl;
     }
 }
-

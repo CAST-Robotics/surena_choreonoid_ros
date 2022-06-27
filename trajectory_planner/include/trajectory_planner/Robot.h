@@ -16,6 +16,7 @@
 #include "GeneralMotion.h"
 #include "EKFEstimator.h"
 #include "PreviewTraj.h"
+#include "ZMPPlanner.h"
 
 #include "fstream"
 

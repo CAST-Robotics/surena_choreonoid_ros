@@ -9,12 +9,29 @@ project(trajectory_planner)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  roslib
   rospy
   std_msgs
   std_srvs
   message_generation
   choreonoid
 )
+
+# yaml-cpp include config from https://github.com/zephir-lang/zephirc/commit/4e3d1c9b35e15b368cf2be46b83eb69be6d65b53
+find_package(PkgConfig REQUIRED)
+# Resolve system dependency on yaml-cpp, which apparently does not
+# provide a CMake find_package() module.
+pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
+
+find_path(YAML_CPP_INCLUDE_DIR
+    NAMES yaml_cpp.h
+    PATHS ${YAML_CPP_INCLUDE_DIRS})
+
+find_library(YAML_CPP_LIBRARY
+    NAMES YAML_CPP
+    PATHS ${YAML_CPP_LIBRARY_DIRS})
+
+link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -211,7 +228,7 @@ include_directories(
 # catkin_add_nosetests(test)
 file(GLOB SOURCES "src/*.cpp")
 add_executable(trajectory_planner ${SOURCES})
-target_link_libraries(trajectory_planner ${catkin_LIBRARIES})
+target_link_libraries(trajectory_planner ${catkin_LIBRARIES} yaml-cpp)
 add_dependencies(trajectory_planner trajectory_planner_generate_messages_cpp
 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
 )

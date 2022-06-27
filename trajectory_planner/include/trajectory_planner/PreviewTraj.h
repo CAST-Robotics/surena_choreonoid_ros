@@ -3,7 +3,6 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
-#include "Eigen/Eigenvalues"
 
 #include <iostream>
 #include <fstream>
@@ -11,7 +10,10 @@
 #include <vector>
 #include <cmath>
 
+#include <ros/package.h>
+
 #include "riccati_solver.h"
+#include "ZMPPlanner.h"
 
 using namespace std;
 using namespace Eigen;
@@ -37,11 +39,12 @@ class PreviewTraj {
 
         Vector3d x0_;
         Vector3d* x_;
+        Vector3d* y_;
         MatrixXd P_;
         MatrixXd Gl_;
         MatrixXd Gx_;
         VectorXd Gd_;
 
-        VectorXd ZMP_;
-        double error_;
+        Vector3d error_;
+        ZMPPlanner* ZMPPlanner_;
 };
