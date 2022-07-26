@@ -88,8 +88,8 @@ public:
         trajectory_planner::GeneralTraj general_traj;
         general_traj.request.init_com_pos = {0, 0, 0.71};
         general_traj.request.init_com_orient = {0, 0, 0};
-        general_traj.request.final_com_pos = {0, 0, 0.65};
-        general_traj.request.final_com_orient = {0, 0, 0};
+        general_traj.request.final_com_pos = {0.05, 0.1, 0.68};
+        general_traj.request.final_com_orient = {0, -0.1, 0.1};
 
         general_traj.request.init_lankle_pos = {0, 0.1, 0};
         general_traj.request.init_lankle_orient = {0, 0, 0};
@@ -110,22 +110,23 @@ public:
 
         traj.request.step_width = 0.0;
         traj.request.alpha = 0.44;
-        traj.request.t_double_support = 0.2;
+        traj.request.t_double_support = 0.1;
         traj.request.t_step = 1.0;
-        traj.request.step_length = 0.35;
-        traj.request.COM_height = 0.65;
-        traj.request.step_count = 4;
-        traj.request.ankle_height = 0.045;
-        traj.request.theta = 0.0;
+        traj.request.step_length = 0.27;
+        traj.request.COM_height = 0.68;
+        traj.request.step_count = 2;
+        traj.request.ankle_height = 0.035;
+        traj.request.theta = 0;
         traj.request.dt = dt;
         result = traj.response.result;
         
         size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
+        size_ = int((general_traj.request.time) / traj.request.dt);
 
         result = true;
 
         gen_client.call(general_traj);
-        client.call(traj);
+        // client.call(traj);
         
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");

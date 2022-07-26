@@ -30,8 +30,8 @@ class Controller {
         Vector3d CoM_;
         double dt_;
         double deltaZ_;
-        int Controller::leastMemberIndex(double *arr, int size);
-        vector<int> Controller::activeSensors(double* bump_sensor_readings, bool left_swing);
-        bool Controller::isRightActive(int index);
-        bool Controller::isUpActive(int index);
+        //int Controller::leastMemberIndex(double *arr, int size);
+        //vector<int> Controller::activeSensors(double* bump_sensor_readings, bool left_swing);
+        //bool Controller::isRightActive(int index);
+        //bool Controller::isUpActive(int index);
 };

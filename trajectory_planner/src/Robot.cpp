@@ -24,6 +24,10 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::generalTrajCallback, this);
     resetTrajServer_ = nh->advertiseService("/reset_traj",
             &Robot::resetTrajCallback, this);
+
+    PreviewTraj traj(0.68, 320);
+    traj.computeWeight();
+    traj.computeTraj();
     
     // SURENA IV geometrical params
     
@@ -98,6 +102,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     links_[12] = lAnkleR;
 
     onlineWalk_ = robot_ctrl;
+    // EKF_ = new EKFEstimator();
 
     //cout << "Robot Object has been Created" << endl;
 }
@@ -111,6 +116,7 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     links_[12]->FK();
     links_[6]->FK();    // update all raw values of sensors and link states
     updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);
+    EKF_->runFilter(accelerometer, gyro, links_[6]->getPose(), links_[12]->getPose());
 
     MatrixXd lfoot(3,1);
     MatrixXd rfoot(3,1);
@@ -186,6 +192,10 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
         rightSwings_ = false;
         leftSwings_ = false;
     }
+
+    // cout << links_[6]->getPose()(0) << ", " << links_[6]->getPose()(1) << ", " << links_[6]->getPose()(2) << ", ";
+    // cout << links_[12]->getPose()(0) << ", " << links_[12]->getPose()(1) << ", " << links_[12]->getPose()(2) << ", ";
+    
     // Update CoM and Sole Positions
     updateSolePosition();
 
