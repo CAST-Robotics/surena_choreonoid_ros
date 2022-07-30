@@ -12,6 +12,7 @@ class Ankle: private MinJerk{
         Vector3d* getTrajectoryR();
         Matrix3d* getRotTrajectoryR();
         Matrix3d* getRotTrajectoryL();
+        int* getRobotState();
 
     private:
         double tStep_;
@@ -30,6 +31,8 @@ class Ankle: private MinJerk{
         Vector3d* rFoot_;
         Matrix3d* lFootRot_;
         Matrix3d* rFootRot_;
+        //Robot Movment State Indicator (0:Stance, 1:Double Support, 2:Right Single Support, 3: Left Single Support, 4:None)
+        int* stateIndicator_;
        
         void updateTrajectory(bool left_first);
 };

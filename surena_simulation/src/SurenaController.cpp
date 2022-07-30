@@ -88,8 +88,8 @@ public:
         trajectory_planner::GeneralTraj general_traj;
         general_traj.request.init_com_pos = {0, 0, 0.71};
         general_traj.request.init_com_orient = {0, 0, 0};
-        general_traj.request.final_com_pos = {0.05, 0.1, 0.68};
-        general_traj.request.final_com_orient = {0, -0.1, 0.1};
+        general_traj.request.final_com_pos = {0, 0, 0.68};
+        general_traj.request.final_com_orient = {0, 0, 0};
 
         general_traj.request.init_lankle_pos = {0, 0.1, 0};
         general_traj.request.init_lankle_orient = {0, 0, 0};
@@ -114,19 +114,19 @@ public:
         traj.request.t_step = 1.0;
         traj.request.step_length = 0.27;
         traj.request.COM_height = 0.68;
-        traj.request.step_count = 2;
+        traj.request.step_count = 10;
         traj.request.ankle_height = 0.035;
-        traj.request.theta = 0;
+        traj.request.theta = 0.0;
         traj.request.dt = dt;
         result = traj.response.result;
         
         size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
-        size_ = int((general_traj.request.time) / traj.request.dt);
+        // size_ = int((general_traj.request.time) / traj.request.dt);
 
         result = true;
 
         gen_client.call(general_traj);
-        // client.call(traj);
+        client.call(traj);
         
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
@@ -138,6 +138,7 @@ public:
         gyro = ioBody->findDevice<RateGyroSensor>("WaistGyro"); //SR1 & SurenaV
         //gyro = ioBody->findDevice<RateGyroSensor>("gyrometer"); //SurenaIV
         io->enableInput(gyro);
+        io->enableInput(ioBody->link(0), LINK_POSITION);
 
         for(int i=0; i < ioBody->numJoints(); ++i){
             Link* joint = ioBody->joint(i);
@@ -187,6 +188,19 @@ public:
             r_ankle.block<3,1>(0, 3) = ioBody->joint(5)->position().translation();
             l_ankle.block<3,3>(0, 0) = ioBody->joint(11)->position().rotation();
             r_ankle.block<3,3>(0, 0) = ioBody->joint(5)->position().rotation();
+            
+            Vector3d base_pos = ioBody->link(0)->p();
+            Matrix3d base_rot = ioBody->link(0)->R();
+
+            // rotation to quaternion
+            Quaterniond base_quat(base_rot);
+            
+            Vector3d left_ankle_pos = l_ankle.block<3,1>(0, 3);
+            Vector3d right_ankle_pos = r_ankle.block<3,1>(0, 3);
+            // cout << base_pos(0) << "," << base_pos(1) << "," << base_pos(2) << ",";
+            // cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << ",";
+            // cout << left_ankle_pos(0) << "," << left_ankle_pos(1) << "," << left_ankle_pos(2) << ",";
+            // cout << right_ankle_pos(0) << "," << right_ankle_pos(1) << "," << right_ankle_pos(2) << endl;
             for(int i = 0; i < 16; i ++){
                 bump_msg.request.left_trans[i] = l_ankle(i / 4, i % 4);
                 bump_msg.request.right_trans[i] = r_ankle(i / 4, i % 4);
