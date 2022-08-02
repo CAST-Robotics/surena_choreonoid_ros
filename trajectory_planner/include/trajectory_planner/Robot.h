@@ -14,7 +14,7 @@
 #include "Ankle.h"
 #include "MinJerk.h"
 #include "GeneralMotion.h"
-#include "EKFEstimator.h"
+//#include "EKFEstimator.h"
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
 
@@ -55,7 +55,7 @@ class Robot{
         PID* DCMController_;
         PID* CoMController_;
         Controller onlineWalk_;
-        EKFEstimator* EKF_;
+        //EKFEstimator* EKF_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){
@@ -89,6 +89,7 @@ class Robot{
         Vector3d* lAnklePos_;
         Matrix3d* rAnkleRot_;
         Matrix3d* lAnkleRot_;
+        int* robotState_;
 
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole

@@ -25,9 +25,9 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     resetTrajServer_ = nh->advertiseService("/reset_traj",
             &Robot::resetTrajCallback, this);
 
-    PreviewTraj traj(0.68, 320);
-    traj.computeWeight();
-    traj.computeTraj();
+    // PreviewTraj traj(0.68, 320);
+    // traj.computeWeight();
+    // traj.computeTraj();
     
     // SURENA IV geometrical params
     
@@ -116,8 +116,22 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     links_[12]->FK();
     links_[6]->FK();    // update all raw values of sensors and link states
     updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);
-    EKF_->runFilter(accelerometer, gyro, links_[6]->getPose(), links_[12]->getPose());
-
+    //EKF_->runFilter(accelerometer, gyro, links_[6]->getPose(), links_[12]->getPose());
+    // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";
+    // cout << accelerometer(0) << ',' << accelerometer(1) << ',' << accelerometer(2) << ",";
+    // cout << links_[6]->getPose()(0) << ',' << links_[6]->getPose()(1) << ',' << links_[6]->getPose()(2) << ",";
+    // cout << links_[12]->getPose()(0) << ',' << links_[12]->getPose()(1) << ',' << links_[12]->getPose()(2) << ",";
+    Quaterniond rankle_quat(links_[6]->getRot());
+    Quaterniond lankle_quat(links_[12]->getRot());
+    cout << rankle_quat.w() << ',' << rankle_quat.x() << ',' << rankle_quat.y() << ',' << rankle_quat.z() << ",";
+    cout << lankle_quat.w() << ',' << lankle_quat.x() << ',' << lankle_quat.y() << ',' << lankle_quat.z() << ",";
+    if(robotState_[iter] == 2){
+        cout << 1 << "," << 0 << endl;
+    }else if(robotState_[iter] == 3){
+        cout << 0 << "," << 1 << endl;
+    }else{
+        cout << 1 << "," << 1 << endl;
+    }
     MatrixXd lfoot(3,1);
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);
@@ -177,7 +191,7 @@ void Robot::updateState(double config[], Vector3d torque_r, Vector3d torque_l, d
     Matrix3d rot = (AngleAxisd(base_attitude[0], Vector3d::UnitX())
                   * AngleAxisd(base_attitude[1], Vector3d::UnitY())
                   * AngleAxisd(base_attitude[2], Vector3d::UnitZ())).matrix();
-    links_[0]->initPose(Vector3d::Zero(3), rot);
+    // links_[0]->initPose(Vector3d::Zero(3), rot);
 
     // Update swing/stance foot
     if (links_[12]->getPose()(2) < links_[6]->getPose()(2)){
@@ -526,6 +540,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         CoMPos_ = appendTrajectory<Vector3d>(CoMPos_, trajectoryPlanner->getCoM(), dataSize_ - trajectory_size, trajectory_size);
         lAnklePos_ = appendTrajectory<Vector3d>(lAnklePos_, anklePlanner->getTrajectoryL(), dataSize_ - trajectory_size, trajectory_size);
         rAnklePos_ = appendTrajectory<Vector3d>(rAnklePos_, anklePlanner->getTrajectoryR(), dataSize_ - trajectory_size, trajectory_size);
+        robotState_ = appendTrajectory<int>(robotState_, anklePlanner->getRobotState(), dataSize_ - trajectory_size, trajectory_size);
 
         CoMRot_ = appendTrajectory<Matrix3d>(CoMRot_, trajectoryPlanner->yawRotGen(), dataSize_ - trajectory_size, trajectory_size);
         lAnkleRot_ = appendTrajectory<Matrix3d>(lAnkleRot_, anklePlanner->getRotTrajectoryL(), dataSize_ - trajectory_size, trajectory_size);
@@ -544,6 +559,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
         CoMPos_ = trajectoryPlanner->getCoM();
         lAnklePos_ = anklePlanner->getTrajectoryL();
         rAnklePos_ = anklePlanner->getTrajectoryR();
+        robotState_ = anklePlanner->getRobotState();
 
         CoMRot_ = trajectoryPlanner->yawRotGen();
         lAnkleRot_ = anklePlanner->getRotTrajectoryR();
@@ -594,6 +610,7 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
         CoMPos_ = appendTrajectory<Vector3d>(CoMPos_, motion_planner->getCOMPos(), dataSize_ - trajectory_size, trajectory_size);
         lAnklePos_ = appendTrajectory<Vector3d>(lAnklePos_, motion_planner->getLAnklePos(), dataSize_ - trajectory_size, trajectory_size);
         rAnklePos_ = appendTrajectory<Vector3d>(rAnklePos_, motion_planner->getRAnklePos(), dataSize_ - trajectory_size, trajectory_size);
+        robotState_ = appendTrajectory<int>(robotState_, motion_planner->getRobotState(), dataSize_ - trajectory_size, trajectory_size);
 
         CoMRot_ = appendTrajectory<Matrix3d>(CoMRot_, motion_planner->getCOMOrient(), dataSize_ - trajectory_size, trajectory_size);
         lAnkleRot_ = appendTrajectory<Matrix3d>(lAnkleRot_, motion_planner->getLAnkleOrient(), dataSize_ - trajectory_size, trajectory_size);
@@ -612,6 +629,7 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
         CoMPos_ = motion_planner->getCOMPos();
         lAnklePos_ = motion_planner->getLAnklePos();
         rAnklePos_ = motion_planner->getRAnklePos();
+        robotState_ = motion_planner->getRobotState();
 
         CoMRot_ = motion_planner->getCOMOrient();
         lAnkleRot_ = motion_planner->getLAnkleOrient();
@@ -682,6 +700,7 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
                               std_srvs::Empty::Response &res)
 {
     delete[] CoMPos_;
+    delete[] robotState_;
     delete[] lAnklePos_;
     delete[] rAnklePos_;
     delete[] CoMRot_;
