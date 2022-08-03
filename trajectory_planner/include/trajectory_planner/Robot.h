@@ -14,7 +14,7 @@
 #include "Ankle.h"
 #include "MinJerk.h"
 #include "GeneralMotion.h"
-//#include "EKFEstimator.h"
+#include "QuatEKF.h"
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
 
@@ -55,7 +55,7 @@ class Robot{
         PID* DCMController_;
         PID* CoMController_;
         Controller onlineWalk_;
-        //EKFEstimator* EKF_;
+        QuatEKF* quatEKF_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){

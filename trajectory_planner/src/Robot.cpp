@@ -102,7 +102,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     links_[12] = lAnkleR;
 
     onlineWalk_ = robot_ctrl;
-    // EKF_ = new EKFEstimator();
+    quatEKF_ = new QuatEKF();
 
     //cout << "Robot Object has been Created" << endl;
 }
@@ -123,15 +123,15 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     // cout << links_[12]->getPose()(0) << ',' << links_[12]->getPose()(1) << ',' << links_[12]->getPose()(2) << ",";
     Quaterniond rankle_quat(links_[6]->getRot());
     Quaterniond lankle_quat(links_[12]->getRot());
-    cout << rankle_quat.w() << ',' << rankle_quat.x() << ',' << rankle_quat.y() << ',' << rankle_quat.z() << ",";
-    cout << lankle_quat.w() << ',' << lankle_quat.x() << ',' << lankle_quat.y() << ',' << lankle_quat.z() << ",";
-    if(robotState_[iter] == 2){
-        cout << 1 << "," << 0 << endl;
-    }else if(robotState_[iter] == 3){
-        cout << 0 << "," << 1 << endl;
-    }else{
-        cout << 1 << "," << 1 << endl;
-    }
+    // cout << rankle_quat.w() << ',' << rankle_quat.x() << ',' << rankle_quat.y() << ',' << rankle_quat.z() << ",";
+    // cout << lankle_quat.w() << ',' << lankle_quat.x() << ',' << lankle_quat.y() << ',' << lankle_quat.z() << ",";
+    // if(robotState_[iter] == 2){
+    //     cout << 1 << "," << 0 << endl;
+    // }else if(robotState_[iter] == 3){
+    //     cout << 0 << "," << 1 << endl;
+    // }else{
+    //     cout << 1 << "," << 1 << endl;
+    // }
     MatrixXd lfoot(3,1);
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);

@@ -13,10 +13,10 @@
 using namespace std;
 using namespace Eigen;
 
-class EKFEstimator {
+class QuatEKF {
     public:
-        EKFEstimator();
-        ~EKFEstimator();
+        QuatEKF();
+        ~QuatEKF();
         void setSensorData(Vector3d acc, Vector3d gyro);
         void setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic);
 
