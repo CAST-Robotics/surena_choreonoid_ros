@@ -1,0 +1,70 @@
+#include "utils.h"
+
+Matrix3d skewSym(const Vector3d &vec){
+    Matrix3d skew;
+    skew << 0, -vec(2), vec(1),
+            vec(2), 0, -vec(0),
+            -vec(1), vec(0), 0;
+    return skew;
+}
+
+void ExpSO3(const Vector3d &vec, Matrix3d &output){
+    Matrix3d A = skewSym(vec);
+    double theta = vec.norm();
+    if(theta == 0){
+        output = Matrix3d::Identity();
+    }else{
+        output = Matrix3d::Identity() + (sin(theta) / theta) * A + (1 - cos(theta)) / (theta * theta) * A * A;
+    }
+}
+
+MatrixXd matrixPower(const MatrixXd &A, const int &n){
+    MatrixXd output;
+    if(n == 0){
+        output = MatrixXd::Identity(A.rows(), A.cols());
+    }else if(n == 1){
+        output = A;
+    }else{
+        MatrixXd B = A;
+        for(int i = 1; i < n; i++){
+            B = B * A;
+        }
+        output = B;
+    }
+    return output;
+}
+
+double factorial(const int &n){
+    double result = 1;
+    for(int i = 1; i <= n; i++){
+        result *= i;
+    }
+    return result;
+}
+
+void gamma(const Vector3d &vec, int n, Matrix3d &output) {
+    Matrix3d A = skewSym(vec);
+    Matrix3d R;
+    ExpSO3(vec, R);
+    double theta = vec.norm();
+    Matrix3d I = Matrix3d::Identity();
+    
+    if(theta <= 1e-10){
+        output = (1 / factorial(n)) * I;
+        return;
+    }
+
+    Matrix3d S = Matrix3d::Identity();
+    for(int i = 1; i <= n; i++){
+        S = S + matrixPower(A, i) / factorial(i);
+    }
+
+    if(n == 0){
+        output = R;
+        return;
+    }else if(n % 2 == 0){
+        output = (1 / factorial(n)) * I + (((-1) ^ (n / 2)) / pow(theta, n)) * (R - S);
+    }else{
+        output = (1 / factorial(n)) * I + (((-1) ^ ((n + 1) / 2)) / pow(theta, n + 1)) * A * (R - S);
+    }
+}
