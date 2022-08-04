@@ -62,9 +62,9 @@ void gamma(const Vector3d &vec, int n, Matrix3d &output) {
     if(n == 0){
         output = R;
         return;
-    }else if(n % 2 == 0){
-        output = (1 / factorial(n)) * I + (((-1) ^ (n / 2)) / pow(theta, n)) * (R - S);
+    }else if(n % 2 != 0){
+        output = (1 / factorial(n)) * I + ((pow(-1, (n + 1) / 2)) / pow(theta, n + 1)) * A * (R - S);
     }else{
-        output = (1 / factorial(n)) * I + (((-1) ^ ((n + 1) / 2)) / pow(theta, n + 1)) * A * (R - S);
+        output = (1 / factorial(n)) * I + (pow(-1, n / 2) / pow(theta, n)) * (R - S);
     }
 }

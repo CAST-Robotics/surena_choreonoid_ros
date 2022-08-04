@@ -2,75 +2,106 @@
 
 QuatEKF::QuatEKF() {
 
+    x_ = MatrixXd::Zero(statesDim_, 1);
+    xPrev_ = MatrixXd::Zero(statesDim_, 1);
+
+    // default initialize states
+    this->initializeStates(Quaterniond(Matrix3d::Identity()), Vector3d::Zero(), Vector3d::Zero(),
+                                       Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero(), Vector3d::Zero());
+
     Gravity_ = Vector3d(0, 0, -9.81);
-    Matrix3d rotation_matrix = Matrix3d::Identity();
-    GBaseRot_ = rotation_matrix;
-    GBaseQuat_ = Quaterniond(rotation_matrix);
-
-    GBasePos_ = Vector3d::Zero();
-    GBaseVel_ = Vector3d::Zero();
-    GRightFootPos_ = Vector3d::Zero();
-    GLeftFootPos_ = Vector3d::Zero();
-    BRightFootPos_ = Vector3d::Zero();
-    BLeftFootPos_ = Vector3d::Zero();
-    BAccBias_ = Vector3d::Zero();
-    BGyroBias_ = Vector3d::Zero();
-
+    
     BAcc_ = Vector3d::Zero();
     BGyro_ = Vector3d::Zero();
 
     BRFootMeasured_ = Vector3d::Zero();
     BLFootMeasured_ = Vector3d::Zero();
 
-    statesDim_ = GBasePos_.size() + GBaseVel_.size() + 4 + GRightFootPos_.size() + 
-                 GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size();
+    statesDim_ = 4 + GBaseVel_.size() + GBasePos_.size() + GLeftFootPos_.size() + 
+                 GRightFootPos_.size() + BGyroBias_.size() + BAccBias_.size();
 
-    statesErrDim_ = GBasePos_.size() + GBaseVel_.size() + 3 + GRightFootPos_.size() + 
-                    GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size();
+    statesErrDim_ = 3 + GBaseVel_.size() + GBasePos_.size() + GLeftFootPos_.size() + 
+                    GRightFootPos_.size() + BGyroBias_.size() + BAccBias_.size();
 
-    rvqStatesDim_ = GBasePos_.size() + GBaseVel_.size() + 4;
+    qvrStatesDim_ = 4 + GBaseVel_.size() + GBasePos_.size();
 
-    processNoiseDim_ = BAcc_.size() + BGyro_.size() + GRightFootPos_.size() + 
-                       GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size();
+    // processNoiseDim_ = BAcc_.size() + BGyro_.size() + GRightFootPos_.size() + 
+    //                    GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size();
 
-    measurmentDim_ = GRightFootPos_.size() + GLeftFootPos_.size();
+    measurmentDim_ = GLeftFootPos_.size() + GRightFootPos_.size();
 
-    xPrior_ = MatrixXd::Zero(statesDim_, 1);
-    xPosterior_ = MatrixXd::Zero(statesDim_, 1);
     y_ = MatrixXd::Zero(measurmentDim_, 1);
     z_ = MatrixXd::Zero(measurmentDim_, 1);
     deltaX_ = MatrixXd::Zero(statesDim_, 1);
 
-    initStateVar_ = 50;
-    P_ = initStateVar_ * MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    P_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    this->initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
     
-    Lc_ = MatrixXd::Zero(statesErrDim_, processNoiseDim_);
-    Qc_ = MatrixXd::Zero(processNoiseDim_, processNoiseDim_);
-    Fc_ = MatrixXd::Zero(statesErrDim_, statesErrDim_);
-    Fk_ = MatrixXd::Zero(statesErrDim_, statesErrDim_);
-    Qk_ = MatrixXd::Zero(statesErrDim_, statesErrDim_);
+    this->setDt(0.002);
 
-    Rk_ = MatrixXd::Zero(measurmentDim_, measurmentDim_);
-    Hk_ = MatrixXd::Zero(measurmentDim_, statesErrDim_);
-    Sk_ = MatrixXd::Zero(measurmentDim_, measurmentDim_);
-    Kk_ = MatrixXd::Zero(statesErrDim_, measurmentDim_);
+    this->setNoiseStd(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
 
-    // noise parameters initilization
-    wf_ = 0.00078;
-    ww_ = 0.000523;
-    wp_r_ = 0.001;
-    wp_l_ = 0.001;
-    wbf_ = 0.0001;
-    wbw_ = 0.000618;
-    np_r_ = 0.01;
-    np_l_ = 0.01;
-    updateQc();
     
-    dt_ = 0.002;
 }
 
 QuatEKF::~QuatEKF() {
 
+}
+
+void QuatEKF::initializeStates(Quaterniond q, Vector3d base_vel, Vector3d base_pos, Vector3d lf_pos, 
+                               Vector3d rf_pos, Vector3d gyro_bias, Vector3d acc_bias){
+    GBaseQuat_ = q;
+    GBaseRot_ = q.toRotationMatrix();
+    GBaseVel_ = base_vel;
+    GBasePos_ = base_pos;
+    GLeftFootPos_ = lf_pos;
+    GRightFootPos_ = rf_pos;
+    BGyroBias_ = gyro_bias;
+    BAccBias_ = acc_bias;
+    concatStates(q, base_vel, base_pos, lf_pos, rf_pos, gyro_bias, acc_bias, xPrev_);
+}
+
+void QuatEKF::concatStates(Quaterniond q, Vector3d base_vel, Vector3d base_pos, Vector3d lf_pos, 
+                          Vector3d rf_pos, Vector3d gyro_bias, Vector3d acc_bias, VectorXd &output){
+    output(0) = q.w();
+    output(1) = q.x();
+    output(2) = q.y();
+    output(3) = q.z();
+
+    output.segment(4, GBaseVel_.size()) = base_vel;
+    output.segment(4 + GBaseVel_.size(), GBasePos_.size()) = base_pos;
+    output.segment(qvrStatesDim_, GLeftFootPos_.size()) = lf_pos;
+    output.segment(qvrStatesDim_ + GLeftFootPos_.size(), GRightFootPos_.size()) = rf_pos;
+    output.segment(qvrStatesDim_ + GLeftFootPos_.size() + GRightFootPos_.size(), BGyroBias_.size()) = gyro_bias;
+    output.segment(qvrStatesDim_ + GLeftFootPos_.size() + GRightFootPos_.size() + BGyroBias_.size(), BAccBias_.size()) = acc_bias;
+}
+
+void QuatEKF::initializeCovariance(double quat_std, double vel_std, double pos_std,
+                                   double contact_std, double gyro_std, double acc_std){
+    quatStd_ = quat_std;
+    velStd_ = vel_std;
+    posStd_ = pos_std;
+    contactStd_ = contact_std;
+    gyroStd_ = gyro_std;
+    accStd_ = acc_std;
+
+    P_.block(0, 0, 3, 3) = quatStd_ * MatrixXd::Identity(3, 3);
+    P_.block(3, 3, 3, 3) = velStd_ * MatrixXd::Identity(3, 3);
+    P_.block(6, 6, 3, 3) = posStd_ * MatrixXd::Identity(3, 3);
+    P_.block(9, 9, 3, 3) = contactStd_ * MatrixXd::Identity(3, 3);
+    P_.block(12, 12, 3, 3) = contactStd_ * MatrixXd::Identity(3, 3);
+    P_.block(15, 15, 3, 3) = gyroStd_ * MatrixXd::Identity(3, 3);
+    P_.block(18, 18, 3, 3) = accStd_ * MatrixXd::Identity(3, 3);
+}
+
+void QuatEKF::setNoiseStd(double gyro_noise, double acc_noise, double gyro_bias_noise, 
+                         double acc_bias_noise, double contact_noise, double measurement_noise){
+    gyroNoiseStd_ = gyro_noise;
+    accNoiseStd_ = acc_noise;
+    gyroBiasNoiseStd_ = gyro_bias_noise;
+    accBiasNoiseStd_ = acc_bias_noise;
+    contactNoiseStd_ = contact_noise;
+    measurementNoiseStd_ = measurement_noise;
 }
 
 void QuatEKF::setSensorData(Vector3d acc, Vector3d gyro){
@@ -85,61 +116,65 @@ void QuatEKF::setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic){
     z_.segment(BRFootMeasured_.size(), BLFootMeasured_.size()) = l_kynematic;
 }
 
-void QuatEKF::setState2prior(){
-    GBasePos_ = xPrior_.segment(0, GBasePos_.size());
-    GBaseVel_ = xPrior_.segment(GBasePos_.size(), GBaseVel_.size());
-    GBaseQuat_.x() = xPrior_(GBasePos_.size() + GBaseVel_.size());
-    GBaseQuat_.y() = xPrior_(GBasePos_.size() + GBaseVel_.size()  + 1);
-    GBaseQuat_.z() = xPrior_(GBasePos_.size() + GBaseVel_.size()  + 2);
-    GBaseQuat_.w() = xPrior_(GBasePos_.size() + GBaseVel_.size()  + 3);
+void QuatEKF::seprateStates(VectorXd &x){
+
+    GBaseQuat_.x() = x(0);
+    GBaseQuat_.y() = x(1);
+    GBaseQuat_.z() = x(2);
+    GBaseQuat_.w() = x(3);
+    GBaseVel_ = x.segment(4, GBaseVel_.size());
+    GBasePos_ = x.segment(4 + GBaseVel_.size(), GBasePos_.size());
+    GLeftFootPos_ = x.segment(qvrStatesDim_, GLeftFootPos_.size());
+    GRightFootPos_ = x.segment(qvrStatesDim_ + GLeftFootPos_.size(), GRightFootPos_.size());
+    BGyroBias_ = x.segment(qvrStatesDim_ + GLeftFootPos_.size() + GRightFootPos_.size(), BGyroBias_.size());
+    BAccBias_ = x.segment(qvrStatesDim_ + GLeftFootPos_.size() + GRightFootPos_.size() + BGyroBias_.size(), BAccBias_.size());
 
     GBaseRot_ = GBaseQuat_.toRotationMatrix();
-
-    GRightFootPos_ = xPrior_.segment(rvqStatesDim_, GRightFootPos_.size());
-    GLeftFootPos_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size(), GLeftFootPos_.size());
-    BAccBias_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size(), BAccBias_.size());
-    BGyroBias_ = xPrior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size(), BGyroBias_.size());
-}
-
-void QuatEKF::setState2posterior(){
-    GBasePos_ = xPosterior_.segment(0, GBasePos_.size());
-    GBaseVel_ = xPosterior_.segment(GBasePos_.size(), GBaseVel_.size());
-    GBaseQuat_.x() = xPosterior_(GBasePos_.size() + GBaseVel_.size());
-    GBaseQuat_.y() = xPosterior_(GBasePos_.size() + GBaseVel_.size()  + 1);
-    GBaseQuat_.z() = xPosterior_(GBasePos_.size() + GBaseVel_.size()  + 2);
-    GBaseQuat_.w() = xPosterior_(GBasePos_.size() + GBaseVel_.size()  + 3);
-
-    GBaseRot_ = GBaseQuat_.toRotationMatrix();
-
-    GRightFootPos_ = xPosterior_.segment(rvqStatesDim_, GRightFootPos_.size());
-    GLeftFootPos_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size(), GLeftFootPos_.size());
-    BAccBias_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size(), BAccBias_.size());
-    BGyroBias_ = xPosterior_.segment(rvqStatesDim_ + GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size(), BGyroBias_.size());
 }
 
 void QuatEKF::predictState(){
-
+    
+    this->seprateStates(xPrev_);
     // remove bias from IMU data
-    Vector3d BAcc_bar = BAcc_ - BAccBias_;
-    Vector3d BGyro_bar = BGyro_ - BGyroBias_;
-    // find orientation change between time steps (initialize quaternion with rotation vector)
-    AngleAxisd delta_gyro((BGyro_bar * dt_).norm(), (BGyro_bar * dt_).normalized());
-    Quaterniond delta_omega = Quaterniond(delta_gyro);
+    BAcc_ = BAcc_ - BAccBias_;
+    BGyro_ = BGyro_ - BGyroBias_;
 
-    // predict position and velocity
-    xPrior_.segment(0,GBasePos_.size()) = GBasePos_ + dt_ * GBaseVel_ + (pow(dt_, 2) / 2) * (GBaseRot_ * BAcc_bar - Gravity_);
-    xPrior_.segment(GBasePos_.size(), GBaseVel_.size()) = GBaseVel_ + dt_ * (GBaseRot_ * BAcc_bar - Gravity_);
+    Matrix3d acc_skew = skewSym(BAcc_);
+    
+    Matrix3d gamma_0;
+    gamma(dt_ * BGyro_, 0, gamma_0);
+    Matrix3d gamma_1;
+    gamma(dt_ * BGyro_, 1, gamma_1);
+    Matrix3d gamma_2;
+    gamma(dt_ * BGyro_, 2, gamma_2);
+
+    // find orientation change between time steps (initialize quaternion with rotation vector)
+    AngleAxisd delta_gyro((dt_ * BGyro_).norm(), (dt_ * BGyro_).normalized());
+    Quaterniond delta_omega = Quaterniond(delta_gyro);
     // predict orientation
     Quaterniond predicted_q = delta_omega * GBaseQuat_;
+    Matrix3d predicted_R = predicted_q.toRotationMatrix();
 
-    xPrior_(GBasePos_.size() + GBaseVel_.size()) = predicted_q.x();
-    xPrior_(GBasePos_.size() + GBaseVel_.size()  + 1) = predicted_q.y();
-    xPrior_(GBasePos_.size() + GBaseVel_.size()  + 2) = predicted_q.z();
-    xPrior_(GBasePos_.size() + GBaseVel_.size()  + 3) = predicted_q.w();
+    // predict position and velocity
+    Vector3d predicted_v = GBaseVel_ + dt_ * (GBaseRot_ * gamma_1 * BAcc_ + Gravity_);
+    Vector3d predicted_p = GBasePos_ + dt_ * GBaseVel_ + pow(dt_, 2) * (GBaseRot_ * gamma_2 * BAcc_ + 0.5 * Gravity_);
 
-    // predict foot positions & biases
-    xPrior_.segment(rvqStatesDim_, statesDim_ - rvqStatesDim_) = xPosterior_.segment(rvqStatesDim_, statesDim_ - rvqStatesDim_);
-    //this->setState2prior();
+    // predict foot positions
+    // what happens if the measurement is not available?
+    Vector3d predicted_lf_p;
+    Vector3d predicted_rf_p;
+    if(updateEnabled_){
+        predicted_lf_p = predicted_p + predicted_R * BLFootMeasured_;
+        predicted_rf_p = predicted_p + predicted_R * BRFootMeasured_;
+    }
+    predicted_lf_p = contact_[0] * GLeftFootPos_ + (1 - contact_[0]) * predicted_lf_p;
+    predicted_rf_p = contact_[1] * GRightFootPos_ + (1 - contact_[1]) * predicted_rf_p;
+
+    // predict biases
+    Vector3d predicted_gyro_bias = BGyroBias_;
+    Vector3d predicted_acc_bias = BAccBias_;
+
+    this->concatStates(predicted_q, predicted_v, predicted_p, predicted_lf_p, predicted_rf_p, predicted_gyro_bias, predicted_acc_bias, x_);
 }
 
 void QuatEKF::updateLc(Matrix3d rot) {
@@ -158,14 +193,6 @@ void QuatEKF::updateQc() {
     Qc_.block(9, 9, 3, 3) = wp_l_ * Matrix3d::Identity();
     Qc_.block(12, 12, 3, 3) = wbf_ * Matrix3d::Identity();
     Qc_.block(15, 15, 3, 3) = wbw_ * Matrix3d::Identity();
-}
-
-Matrix3d QuatEKF::skewSym(const Vector3d &vec){
-    Matrix3d skew;
-    skew << 0, -vec(2), vec(1),
-            vec(2), 0, -vec(0),
-            -vec(1), vec(0), 0;
-    return skew;
 }
 
 void QuatEKF::updateFc(Matrix3d rot) {
