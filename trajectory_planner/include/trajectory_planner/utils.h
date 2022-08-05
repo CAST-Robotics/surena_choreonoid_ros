@@ -17,4 +17,4 @@ Matrix3d skewSym(const Vector3d &vec);
 void ExpSO3(const Vector3d &vec, Matrix3d &output);
 MatrixXd matrixPower(const MatrixXd &A, const int &n);
 double factorial(const int &n);
-void gamma(const Vector3d &vec, int n, Matrix3d &output);
+Matrix3d gamma(const Vector3d &vec, int n);

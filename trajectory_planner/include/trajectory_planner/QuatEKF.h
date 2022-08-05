@@ -35,9 +35,7 @@ class QuatEKF {
 
         void predict();
         void predictState();
-        void updateLc(Matrix3d rot);
-        void updateQc();
-        void updateFc(Matrix3d rot);
+        void updateQd();
         void predictCov();
         
         void update();
@@ -59,6 +57,8 @@ class QuatEKF {
 
         Vector3d BRFootMeasured_;
         Vector3d BLFootMeasured_;
+        Matrix3d BRFootRotMeasured_;
+        Matrix3d BLFootRotMeasured_;
         int contact_[2];
 
         Vector3d BAcc_;
@@ -77,9 +77,8 @@ class QuatEKF {
         MatrixXd P_;
 
         MatrixXd Lc_;
-        MatrixXd Qc_;
-        MatrixXd Fc_;
-        MatrixXd Fk_;
+        MatrixXd Qd_;
+        MatrixXd Phi_;
         MatrixXd Qk_;
 
         MatrixXd Rk_;

@@ -11,11 +11,13 @@ QuatEKF::QuatEKF() {
 
     Gravity_ = Vector3d(0, 0, -9.81);
     
-    BAcc_ = Vector3d::Zero();
     BGyro_ = Vector3d::Zero();
+    BAcc_ = Vector3d::Zero();
 
-    BRFootMeasured_ = Vector3d::Zero();
     BLFootMeasured_ = Vector3d::Zero();
+    BRFootMeasured_ = Vector3d::Zero();
+    BLFootRotMeasured_ = Matrix3d::Identity();
+    BRFootRotMeasured_ = Matrix3d::Identity();
 
     statesDim_ = 4 + GBaseVel_.size() + GBasePos_.size() + GLeftFootPos_.size() + 
                  GRightFootPos_.size() + BGyroBias_.size() + BAccBias_.size();
@@ -33,6 +35,9 @@ QuatEKF::QuatEKF() {
     y_ = MatrixXd::Zero(measurmentDim_, 1);
     z_ = MatrixXd::Zero(measurmentDim_, 1);
     deltaX_ = MatrixXd::Zero(statesDim_, 1);
+
+    Phi_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    Qd_ = MatrixXd::Zero(statesErrDim_, statesErrDim_);
 
     P_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     this->initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
@@ -141,12 +146,9 @@ void QuatEKF::predictState(){
 
     Matrix3d acc_skew = skewSym(BAcc_);
     
-    Matrix3d gamma_0;
-    gamma(dt_ * BGyro_, 0, gamma_0);
-    Matrix3d gamma_1;
-    gamma(dt_ * BGyro_, 1, gamma_1);
-    Matrix3d gamma_2;
-    gamma(dt_ * BGyro_, 2, gamma_2);
+    Matrix3d gamma_0 = gamma(dt_ * BGyro_, 0);
+    Matrix3d gamma_1 = gamma(dt_ * BGyro_, 1);
+    Matrix3d gamma_2 = gamma(dt_ * BGyro_, 2);
 
     // find orientation change between time steps (initialize quaternion with rotation vector)
     AngleAxisd delta_gyro((dt_ * BGyro_).norm(), (dt_ * BGyro_).normalized());
@@ -177,46 +179,82 @@ void QuatEKF::predictState(){
     this->concatStates(predicted_q, predicted_v, predicted_p, predicted_lf_p, predicted_rf_p, predicted_gyro_bias, predicted_acc_bias, x_);
 }
 
-void QuatEKF::updateLc(Matrix3d rot) {
-    Lc_.block(3, 0, 3, 3) = -rot.transpose();
-    Lc_.block(6, 3, 3, 3) = -Matrix3d::Identity();
-    Lc_.block(9, 6, 3, 3) = rot.transpose(); // right foot
-    Lc_.block(12, 9, 3, 3) = rot.transpose(); // left foot
-    Lc_.block(15, 12, 3, 3) = Matrix3d::Identity();
-    Lc_.block(18, 15, 3, 3) = Matrix3d::Identity();
-}
-
-void QuatEKF::updateQc() {
-    Qc_.block(0, 0, 3, 3) = wf_ * Matrix3d::Identity();
-    Qc_.block(3, 3, 3, 3) = ww_ * Matrix3d::Identity();
-    Qc_.block(6, 6, 3, 3) = wp_r_ * Matrix3d::Identity();
-    Qc_.block(9, 9, 3, 3) = wp_l_ * Matrix3d::Identity();
-    Qc_.block(12, 12, 3, 3) = wbf_ * Matrix3d::Identity();
-    Qc_.block(15, 15, 3, 3) = wbw_ * Matrix3d::Identity();
-}
-
-void QuatEKF::updateFc(Matrix3d rot) {
-    Fc_.block(0, 3, 3, 3) = Matrix3d::Identity();
-    Fc_.block(3, 6, 3, 3) = -rot.transpose() * skewSym(BAcc_);
-    Fc_.block(3, 15, 3, 3) = -rot.transpose();
-    Fc_.block(6, 6, 3, 3) = -skewSym(BGyro_);
-    Fc_.block(6, 18, 3, 3) = -Matrix3d::Identity();
-}
-
 void QuatEKF::predictCov() {
-    this->updateFc(GBaseRot_);
-    this->updateLc(GBaseRot_);
-    this->updateQc();
 
-    Fk_ = MatrixXd::Identity(statesErrDim_, statesErrDim_) + Fc_ * dt_;
-    Qk_ = Fk_ * Lc_ * Qc_ * Lc_.transpose() * Fk_.transpose() * dt_;
-    P_ = Fk_ * P_ * Fk_.transpose() + Qk_;
+    Matrix3d gamma_0 = gamma(dt_ * BGyro_, 0);
+    Matrix3d gamma_1 = gamma(dt_ * BGyro_, 1);
+    Matrix3d gamma_2 = gamma(dt_ * BGyro_, 2);
+    
+    Matrix3d phi_skew = skewSym(dt_ * BGyro_);
+    Matrix3d acc_skew = skewSym(BAcc_);
+    double phi_norm = (dt_ * BGyro_).norm();
+    Matrix3d psi_1;
+    Matrix3d psi_2;
+
+    if(phi_norm > 1e-6){
+
+        psi_1 = acc_skew * gamma(-dt_ * BGyro_, 2)
+        + ((sin(phi_norm) - phi_norm * cos(phi_norm))/(pow(phi_norm, 3))) * (phi_skew * acc_skew)
+        - ((cos(2 * phi_norm) - 4 * cos(phi_norm) + 3) / (4 * pow(phi_norm, 4)))*(phi_skew * acc_skew * phi_skew)
+        + ((4 * sin(phi_norm) + sin(2 * phi_norm) - 4 * phi_norm * cos(phi_norm) - 2 * phi_norm) / (4 * pow(phi_norm, 5))) * (phi_skew * acc_skew * phi_skew * phi_skew)
+        + ((pow(phi_norm, 2) - 2 * phi_norm * sin(phi_norm) - 2 * cos(phi_norm) + 2) / (2 * pow(phi_norm, 4))) * (phi_skew * phi_skew * acc_skew)
+        - ((6 * phi_norm - 8 * sin(phi_norm) + sin(2 * phi_norm)) / (4 * pow(phi_norm, 5))) * (phi_skew * phi_skew * acc_skew * phi_skew)
+        + ((2 * pow(phi_norm, 2) - 4 * phi_norm * sin(phi_norm) - cos(2 * phi_norm) + 1) / (4 * pow(phi_norm, 6))) * (phi_skew * phi_skew * acc_skew * phi_skew * phi_skew);
+
+        psi_2 = acc_skew * gamma(-dt_ * BGyro_, 3)
+        - ((phi_norm * sin(phi_norm) + 2 * cos(phi_norm) - 2) / (pow(phi_norm, 4))) * (phi_skew * acc_skew)
+        - ((6 * phi_norm - 8 * sin(phi_norm) + sin(2 * phi_norm)) / (8 * pow(phi_norm, 5))) * (phi_skew * acc_skew * phi_skew)
+        - ((2 * pow(phi_norm, 2) + 8 * phi_norm * sin(phi_norm) + 16 * cos(phi_norm) + cos(2 * phi_norm) - 17) / (8 * pow(phi_norm, 6))) * (phi_skew * acc_skew * phi_skew * phi_skew)
+        + ((pow(phi_norm, 3) + 6 * phi_norm - 12 * sin(phi_norm) + 6 * phi_norm * cos(phi_norm)) / (6 * pow(phi_norm, 5))) * (phi_skew * phi_skew * acc_skew)
+        - ((6 * pow(phi_norm, 2) + 16 * cos(phi_norm) - cos(2 * phi_norm) - 15) / (8 * pow(phi_norm, 6))) * (phi_skew * phi_skew * acc_skew * phi_skew)
+        + ((4 * pow(phi_norm, 3) + 6 * phi_norm - 24 * sin(phi_norm) - 3 * sin(2 * phi_norm) + 24 * phi_norm * cos(phi_norm)) / (24 * pow(phi_norm, 7))) * (phi_skew * phi_skew * acc_skew * phi_skew * phi_skew);
+    
+    }else{
+        psi_1 = (1.0/2.0) * acc_skew;
+        psi_2 = (1.0/6.0) * acc_skew;
+    }
+
+    Phi_.block(0, 0, 3, 3) = gamma_0.transpose();
+    Phi_.block(3, 0, 3, 3) = -dt_ * GBaseRot_ * skewSym(gamma_1 * BAcc_);
+    Phi_.block(6, 0, 3, 3) = -pow(dt_, 2) * GBaseRot_ * skewSym(gamma_2 * BAcc_);
+    Phi_.block(6, 3, 3, 3) = dt_ * Matrix3d::Identity();
+    Phi_.block(0, 15, 3, 3) = -dt_ * gamma_1.transpose();
+    Phi_.block(3, 15, 3, 3) = -pow(dt_, 2) * GBaseRot_ * psi_1;
+    Phi_.block(6, 15, 3, 3) = -pow(dt_, 3) * GBaseRot_ * psi_2;
+    Phi_.block(3, 18, 3, 3) = -dt_ * GBaseRot_ * gamma_1;
+    Phi_.block(6, 18, 3, 3) = -pow(dt_, 2) * GBaseRot_ * gamma_2;
+
+    this->updateQd();
+    
+    P_ = Phi_ * P_ * Phi_.transpose() + Qd_;
+}
+
+void QuatEKF::updateQd() {
+    Matrix3d hR_L = BLFootRotMeasured_;
+    Matrix3d hR_R = BRFootRotMeasured_;
+    Qd_.block(0, 0, 3, 3) = gyroNoiseStd_ * Matrix3d::Identity();
+    Qd_.block(3, 3, 3, 3) = accNoiseStd_ * Matrix3d::Identity();
+    Qd_.block(6, 6, 3, 3) = Matrix3d::Zero();
+    Qd_.block(9, 9, 3, 3) = hR_L * (contactNoiseStd_ * Matrix3d::Identity() + (1e4 * (1 - contact_[0])) * Matrix3d::Identity()) * hR_L.transpose();
+    Qd_.block(12, 12, 3, 3) = hR_R * (contactNoiseStd_ * Matrix3d::Identity() + (1e4 * (1 - contact_[1])) * Matrix3d::Identity()) * hR_R.transpose();
+    Qd_.block(15, 15, 3, 3) = gyroBiasNoiseStd_ * Matrix3d::Identity();
+    Qd_.block(18, 18, 3, 3) = accBiasNoiseStd_ * Matrix3d::Identity();
+
+    MatrixXd G = MatrixXd::Zero(statesErrDim_, statesErrDim_);
+    G.block(0, 0, 3, 3) = Matrix3d::Identity();
+    G.block(3, 3, 3, 3) = GBaseRot_;
+    G.block(6, 6, 3, 3) = Matrix3d::Zero();
+    G.block(9, 9, 3, 3) = GBaseRot_;
+    G.block(12, 12, 3, 3) = GBaseRot_;
+    G.block(15, 15, 3, 3) = Matrix3d::Identity();
+    G.block(18, 18, 3, 3) = Matrix3d::Identity();
+
+    Qd_ = Phi_ * G * Qd_ * G.transpose() * Phi_.transpose() * dt_;
 }
 
 void QuatEKF::predict() {
     this->predictState();
     this->predictCov();
-    this->setState2prior();
 }
 
 void QuatEKF::updateRk() {

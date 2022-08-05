@@ -42,7 +42,8 @@ double factorial(const int &n){
     return result;
 }
 
-void gamma(const Vector3d &vec, int n, Matrix3d &output) {
+Matrix3d gamma(const Vector3d &vec, int n) {
+    Matrix3d output;
     Matrix3d A = skewSym(vec);
     Matrix3d R;
     ExpSO3(vec, R);
@@ -51,7 +52,7 @@ void gamma(const Vector3d &vec, int n, Matrix3d &output) {
     
     if(theta <= 1e-10){
         output = (1 / factorial(n)) * I;
-        return;
+        return output;
     }
 
     Matrix3d S = Matrix3d::Identity();
@@ -61,10 +62,12 @@ void gamma(const Vector3d &vec, int n, Matrix3d &output) {
 
     if(n == 0){
         output = R;
-        return;
+        return output;
     }else if(n % 2 != 0){
         output = (1 / factorial(n)) * I + ((pow(-1, (n + 1) / 2)) / pow(theta, n + 1)) * A * (R - S);
+        return output;
     }else{
         output = (1 / factorial(n)) * I + (pow(-1, n / 2) / pow(theta, n)) * (R - S);
+        return output;
     }
 }
