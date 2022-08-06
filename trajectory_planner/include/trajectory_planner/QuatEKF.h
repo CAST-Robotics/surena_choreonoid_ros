@@ -38,9 +38,8 @@ class QuatEKF {
         void updateQd();
         void predictCov();
         
+        void updateState(VectorXd delta, VectorXd &x);
         void update();
-        void updateRk();
-        void updateHk();
 
         void runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector3d lfmeasured);
 
@@ -69,22 +68,19 @@ class QuatEKF {
 
         VectorXd x_;
         VectorXd xPrev_;
-        VectorXd z_;
         VectorXd y_;
         VectorXd deltaX_;
 
 
         MatrixXd P_;
 
-        MatrixXd Lc_;
         MatrixXd Qd_;
         MatrixXd Phi_;
-        MatrixXd Qk_;
 
-        MatrixXd Rk_;
-        MatrixXd Hk_;
-        MatrixXd Sk_;
-        MatrixXd Kk_;
+        MatrixXd Hd_;
+        MatrixXd Rd_;
+        MatrixXd Sd_;
+        MatrixXd Kd_;
         
         double gyroNoiseStd_;
         double accNoiseStd_;
@@ -102,16 +98,12 @@ class QuatEKF {
         double gyroStd_;
         double accStd_;
 
-        vector<double> Config_;
-        vector<double> ConfigDot_;
-
         Vector3d Gravity_;
 
         int statesDim_;
         int statesErrDim_;
         int processNoiseDim_;
         int qvrStatesDim_;
-
         int measurmentDim_;
         double dt_;
         bool updateEnabled_;

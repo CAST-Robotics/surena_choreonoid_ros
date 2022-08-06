@@ -33,13 +33,18 @@ QuatEKF::QuatEKF() {
     measurmentDim_ = GLeftFootPos_.size() + GRightFootPos_.size();
 
     y_ = MatrixXd::Zero(measurmentDim_, 1);
-    z_ = MatrixXd::Zero(measurmentDim_, 1);
-    deltaX_ = MatrixXd::Zero(statesDim_, 1);
+    deltaX_ = MatrixXd::Zero(statesErrDim_, 1);
 
     Phi_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     Qd_ = MatrixXd::Zero(statesErrDim_, statesErrDim_);
 
     P_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+
+    Hd_ = MatrixXd::Zero(measurmentDim_, statesErrDim_);
+    Rd_ = MatrixXd::Zero(measurmentDim_, measurmentDim_);
+    Sd_ = MatrixXd::Zero(measurmentDim_, measurmentDim_);
+    Kd_ = MatrixXd::Zero(statesErrDim_, measurmentDim_);
+    
     this->initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
     
     this->setDt(0.002);
@@ -117,8 +122,6 @@ void QuatEKF::setSensorData(Vector3d acc, Vector3d gyro){
 void QuatEKF::setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic){
     BRFootMeasured_ = r_kynematic;
     BLFootMeasured_ = l_kynematic;
-    z_.segment(0, BRFootMeasured_.size()) = r_kynematic;
-    z_.segment(BRFootMeasured_.size(), BLFootMeasured_.size()) = l_kynematic;
 }
 
 void QuatEKF::seprateStates(VectorXd &x){
@@ -225,7 +228,7 @@ void QuatEKF::predictCov() {
     Phi_.block(6, 18, 3, 3) = -pow(dt_, 2) * GBaseRot_ * gamma_2;
 
     this->updateQd();
-    
+
     P_ = Phi_ * P_ * Phi_.transpose() + Qd_;
 }
 
@@ -257,57 +260,55 @@ void QuatEKF::predict() {
     this->predictCov();
 }
 
-void QuatEKF::updateRk() {
-    Rk_.block(0, 0, 3, 3) = np_r_ * Matrix3d::Identity();
-    Rk_.block(3, 3, 3, 3) = np_l_ * Matrix3d::Identity();
-    Rk_ = Rk_  / dt_;
-}
+void QuatEKF::updateState(VectorXd delta, VectorXd &x){
+    this->seprateStates(x);
+    AngleAxisd delta_rot((x.segment(0, 3)).norm(), (x.segment(0, 3)).normalized());
+    Quaterniond delta_quat = Quaterniond(delta_rot);
+    Quaterniond updated_q = delta_quat * GBaseQuat_;
+    Vector3d updated_v = GBaseVel_ + delta.segment(3, 3);
+    Vector3d updated_p = GBasePos_ + delta.segment(6, 3);
+    Vector3d updated_lfp = GLeftFootPos_ + delta.segment(9, 3);
+    Vector3d updated_rfp = GRightFootPos_ + delta.segment(12, 3);
+    Vector3d updated_bg = BGyroBias_ + delta.segment(15, 3);
+    Vector3d updated_ba = BAccBias_ + delta.segment(18, 3);
 
-void QuatEKF::updateHk() {
-    Hk_.block(0, 0, 3, 3) = -GBaseRot_;
-    BRightFootPos_ = GBaseRot_ * (GRightFootPos_ - GBasePos_);
-    Hk_.block(0, 6, 3, 3) = this->skewSym(BRightFootPos_);
-    Hk_.block(0, 9, 3, 3) = GBaseRot_;
-    Hk_.block(3, 0, 3, 3) = -GBaseRot_;
-    BLeftFootPos_ = GBaseRot_ * (GLeftFootPos_ - GBasePos_);
-    Hk_.block(3, 6, 3, 3) = this->skewSym(BLeftFootPos_);
-    Hk_.block(3, 12, 3, 3) = GBaseRot_;
+    this->concatStates(updated_q, updated_v, updated_p, updated_lfp, updated_rfp, updated_bg, updated_ba, x);
 }
-
 
 void QuatEKF::update() {
-    this->updateRk();
-    this->updateHk();
-    Sk_ = Hk_ * P_ * Hk_.transpose() + Rk_;
+    this->seprateStates(x_);
+    Hd_ = MatrixXd::Zero(measurmentDim_, statesErrDim_);
+    y_ = MatrixXd::Zero(measurmentDim_, 1);
+    Rd_ = MatrixXd::Zero(measurmentDim_, measurmentDim_);
 
-    // calculate Kalman gain
-    Kk_ = P_ * Hk_.transpose() * (Sk_).inverse();
-
-    // calculate Residual
-    y_.head(GRightFootPos_.size()) = BRFootMeasured_ - BRightFootPos_;
-    y_.segment(GRightFootPos_.size(), GLeftFootPos_.size()) = BLFootMeasured_ - BLeftFootPos_;
-
-    // update state
-    deltaX_ = Kk_ * y_;
-    xPosterior_.head(GBasePos_.size() + GBaseVel_.size()) += deltaX_.head(GBasePos_.size() + GBaseVel_.size());
-    xPosterior_.tail(GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size()) += deltaX_.tail(GRightFootPos_.size() + GLeftFootPos_.size() + BAccBias_.size() + BGyroBias_.size());
-
-    Vector3d delta_phi;
-    delta_phi(0) = xPosterior_(GBasePos_.size() + GBaseVel_.size());
-    delta_phi(1) = xPosterior_(GBasePos_.size() + GBaseVel_.size() + 1);
-    delta_phi(2) = xPosterior_(GBasePos_.size() + GBaseVel_.size() + 2);
-    AngleAxisd delta_rot(delta_phi.norm(), delta_phi.normalized());
-    Quaterniond delta_quat = Quaterniond(delta_rot);
-    Quaterniond q_posterior = delta_quat * GBaseQuat_;
-    xPosterior_(GBasePos_.size() + GBaseVel_.size()) = q_posterior.x();
-    xPosterior_(GBasePos_.size() + GBaseVel_.size() + 1) = q_posterior.y();
-    xPosterior_(GBasePos_.size() + GBaseVel_.size() + 2) = q_posterior.z();
-    xPosterior_(GBasePos_.size() + GBaseVel_.size() + 3) = q_posterior.w();
-
-    // update covariance
-    P_ = (MatrixXd::Identity(statesErrDim_, statesErrDim_) - Kk_ * Hk_) * P_;
-
-    this->setState2posterior();
+    if(contact_[0] == 1){
+        y_.segment(0, GLeftFootPos_.size()) = BLFootMeasured_ - GBaseRot_.transpose() * (GLeftFootPos_ - GBasePos_);
+        Hd_.block(0, 0, 3, 3) = skewSym(GBaseRot_.transpose() * (GLeftFootPos_ - GBasePos_));
+        Hd_.block(0, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 6, 3, 3) = -GBaseRot_.transpose();
+        Hd_.block(0, 9, 3, 3) = GBaseRot_.transpose();
+        Hd_.block(0, 12, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 18, 3, 3) = Matrix3d::Zero();
+        Rd_.block(0, 0, 3, 3) = measurementNoiseStd_ * Matrix3d::Identity();
+    }
+    if(contact_[1] == 1){
+        y_.segment(3, GRightFootPos_.size()) = BRFootMeasured_ - GBaseRot_.transpose() * (GRightFootPos_ - GBasePos_);
+        Hd_.block(3, 0, 3, 3) = skewSym(GBaseRot_.transpose() * (GRightFootPos_ - GBasePos_));
+        Hd_.block(3, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 6, 3, 3) = -GBaseRot_.transpose();
+        Hd_.block(3, 9, 3, 3) = GBaseRot_.transpose();
+        Hd_.block(3, 12, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 18, 3, 3) = Matrix3d::Zero();
+        Rd_.block(3, 3, 3, 3) = measurementNoiseStd_ * Matrix3d::Identity();
+    }
+    Sd_ = Hd_ * P_ * Hd_.transpose() + Rd_;
+    Kd_ = P_ * Hd_.transpose() * Sd_.inverse();
+    deltaX_ = Kd_ * y_;
+    this->updateState(deltaX_, x_);
+    MatrixXd I = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    P_ = (I - Kd_ * Hd_) * P_ * (I - Kd_ * Hd_).transpose() + Kd_ * Rd_ * Kd_.transpose();
 }
 
 void QuatEKF::runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector3d lfmeasured) {
@@ -319,11 +320,3 @@ void QuatEKF::runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector
     setMeasuredData(rfmeasured, lfmeasured);
     this->update();
 }
-
-// int main() {
-//     EKFEstimator estimator;
-//     Vector3d acc(0, 0, 9.9);
-//     Vector3d gyro(0, 0, 0);
-//     estimator.runFilter(acc, gyro, gyro, gyro);
-//     return 0;
-// }
