@@ -103,6 +103,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
     onlineWalk_ = robot_ctrl;
     quatEKF_ = new QuatEKF();
+    lieEKF_ = new LieEKF();
 
     //cout << "Robot Object has been Created" << endl;
 }
@@ -127,8 +128,13 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
         contact[0] = 1;
         contact[1] = 1;
     }
+    // add noise to the sensor values
+    std::default_random_engine generator;
+    std::normal_distribution<double> dist(0.0, 0.02);
+
     quatEKF_->setDt(dt_);
-    quatEKF_->runFilter(gyro, accelerometer, links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
+    lieEKF_->setDt(dt_);
+    quatEKF_->runFilter(gyro + Vector3d(dist(generator), dist(generator), dist(generator)), accelerometer + Vector3d(dist(generator), dist(generator), dist(generator)), links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
     // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";
     // cout << accelerometer(0) << ',' << accelerometer(1) << ',' << accelerometer(2) << ",";
     // cout << links_[6]->getPose()(0) << ',' << links_[6]->getPose()(1) << ',' << links_[6]->getPose()(2) << ",";

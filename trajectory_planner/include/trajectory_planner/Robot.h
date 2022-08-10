@@ -15,10 +15,12 @@
 #include "MinJerk.h"
 #include "GeneralMotion.h"
 #include "QuatEKF.h"
+#include "LieEKF.h"
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
 
 #include "fstream"
+#include <random>
 
 using namespace std;
 
@@ -56,6 +58,7 @@ class Robot{
         PID* CoMController_;
         Controller onlineWalk_;
         QuatEKF* quatEKF_;
+        LieEKF* lieEKF_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){

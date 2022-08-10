@@ -112,7 +112,7 @@ public:
         traj.request.alpha = 0.44;
         traj.request.t_double_support = 0.1;
         traj.request.t_step = 1.0;
-        traj.request.step_length = 0.27;
+        traj.request.step_length = 0.17;
         traj.request.COM_height = 0.68;
         traj.request.step_count = 4;
         traj.request.ankle_height = 0.035;

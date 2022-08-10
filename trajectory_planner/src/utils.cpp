@@ -71,3 +71,21 @@ Matrix3d gamma(const Vector3d &vec, int n) {
         return output;
     }
 }
+
+
+MatrixXd adjoint(const MatrixXd &X){
+    int n = X.rows();
+    int size = (n - 2) * 3;
+    MatrixXd output = MatrixXd::Zero(size, size);
+    Matrix3d R = X.block(0, 0, 3, 3);
+    
+    for(int i = 0; i < size; i += 3){
+        output.block(i, i, 3, 3) = R;
+    }
+
+    output.block(3, 0, 3, 3) = skewSym(X.block(0, 3, 3, 1)) * R;
+    output.block(6, 0, 3, 3) = skewSym(X.block(0, 4, 3, 1)) * R;
+    output.block(9, 0, 3, 3) = skewSym(X.block(0, 5, 3, 1)) * R;
+    output.block(12, 0, 3, 3) = skewSym(X.block(0, 6, 3, 1)) * R;
+    return output;
+}
