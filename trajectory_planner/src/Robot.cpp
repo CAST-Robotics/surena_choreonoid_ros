@@ -116,7 +116,19 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     links_[12]->FK();
     links_[6]->FK();    // update all raw values of sensors and link states
     updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);
-    //EKF_->runFilter(accelerometer, gyro, links_[6]->getPose(), links_[12]->getPose());
+    int contact[2];
+    if(robotState_[iter] == 2){
+        contact[0] = 0;
+        contact[1] = 1;
+    }else if(robotState_[iter] == 3){
+        contact[0] = 1;
+        contact[1] = 0;
+    }else{
+        contact[0] = 1;
+        contact[1] = 1;
+    }
+    quatEKF_->setDt(dt_);
+    quatEKF_->runFilter(gyro, accelerometer, links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
     // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";
     // cout << accelerometer(0) << ',' << accelerometer(1) << ',' << accelerometer(2) << ",";
     // cout << links_[6]->getPose()(0) << ',' << links_[6]->getPose()(1) << ',' << links_[6]->getPose()(2) << ",";

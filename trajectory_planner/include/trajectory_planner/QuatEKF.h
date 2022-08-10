@@ -26,12 +26,12 @@ class QuatEKF {
         void initializeCovariance(double quat_std, double vel_std, double pos_std,
                                   double contact_std, double gyro_std, double acc_std);
         inline void setDt(double dt){dt_ = dt;}
-        void setSensorData(Vector3d acc, Vector3d gyro);
-        void setMeasuredData(Vector3d r_kynematic, Vector3d l_kynematic);
+        void setSensorData(Vector3d gyro, Vector3d acc);
+        void setMeasuredData(Vector3d l_kynematic, Vector3d r_kynematic, Matrix3d l_kynematic_rot, Matrix3d r_kynematic_rot);
         void setNoiseStd(double gyro_noise, double acc_noise, double gyro_bias_noise, 
                          double acc_bias_noise, double contact_noise, double measurement_noise);
 
-        void seprateStates(VectorXd &x);
+        void seprateStates(const VectorXd &x);
 
         void predict();
         void predictState();
@@ -41,7 +41,7 @@ class QuatEKF {
         void updateState(VectorXd delta, VectorXd &x);
         void update();
 
-        void runFilter(Vector3d acc, Vector3d gyro, Vector3d rfmeasured, Vector3d lfmeasured);
+        void runFilter(Vector3d gyro, Vector3d acc, Vector3d lfpmeasured, Vector3d rfpmeasured, Matrix3d lfrot, Matrix3d rfrot, int* contact, bool update_enaled);
 
     
     private:
@@ -95,14 +95,13 @@ class QuatEKF {
         double velStd_;
         double posStd_;
         double contactStd_;
-        double gyroStd_;
-        double accStd_;
+        double gyroBiasStd_;
+        double accBiasStd_;
 
         Vector3d Gravity_;
 
         int statesDim_;
         int statesErrDim_;
-        int processNoiseDim_;
         int qvrStatesDim_;
         int measurmentDim_;
         double dt_;
