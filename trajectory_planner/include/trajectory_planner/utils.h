@@ -19,3 +19,4 @@ MatrixXd matrixPower(const MatrixXd &A, const int &n);
 double factorial(const int &n);
 Matrix3d gamma(const Vector3d &vec, int n);
 MatrixXd adjoint(const MatrixXd &X);
+MatrixXd SEK3Exp(const VectorXd &vec);

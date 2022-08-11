@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <random>
 
 #include "utils.h"
 
@@ -36,7 +37,7 @@ class LieEKF {
         void predict();
         void updateQd();
         
-        void updateState(VectorXd delta, VectorXd &x);
+        void updateState(VectorXd delta, const MatrixXd &prev_x, const VectorXd &prev_theta, MatrixXd &x, VectorXd &theta);
         void update();
 
         void runFilter(Vector3d gyro, Vector3d acc, Vector3d lfpmeasured, Vector3d rfpmeasured, Matrix3d lfrot, Matrix3d rfrot, int* contact, bool update_enaled);
@@ -70,11 +71,15 @@ class LieEKF {
         VectorXd thetaPrev_;
         VectorXd thetaPred_;
 
-        VectorXd y_;
+        VectorXd Y_;
+        VectorXd b_;
+        MatrixXd PI_;
+        MatrixXd BigX_;
         VectorXd deltaX_;
 
 
         MatrixXd P_;
+        MatrixXd Ppred_;
 
         MatrixXd Qd_;
         MatrixXd Phi_;
@@ -105,8 +110,7 @@ class LieEKF {
         int statesDim_;
         int thetaDim_;
         int statesErrDim_;
-        int qvrStatesDim_;
-        int measurmentDim_;
+
         double dt_;
         bool updateEnabled_;
 

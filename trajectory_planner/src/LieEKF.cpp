@@ -39,12 +39,13 @@ LieEKF::LieEKF(){
     this->setDt(0.002);
 
     P_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    Ppred_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     Phi_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     // default initial covaricance matrix
     this->initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
 
     // default process and measurement noise
-    this->setNoiseStd(0.05, 0.05, 0.1, 0.1, 0.1, 0.01);
+    this->setNoiseStd(0.1, 0.1, 0.1, 0.1, 0.1, 0.05);
 
     updateEnabled_ = true;
 }
@@ -64,7 +65,8 @@ void LieEKF::initializeStates(Matrix3d R, Vector3d base_vel, Vector3d base_pos, 
 
 void LieEKF::concatStates(Matrix3d R, Vector3d base_vel, Vector3d base_pos, Vector3d lf_pos, 
                           Vector3d rf_pos, Vector3d gyro_bias, Vector3d acc_bias, MatrixXd &output, VectorXd &output_theta){
-    output = MatrixXd::Identity();
+    int size = output.rows();
+    output = MatrixXd::Identity(size, size);
     output.block(0, 0, 3, 3) = R;
     output.block(0, 3, 3, 1) = base_vel;
     output.block(0, 4, 3, 1) = base_pos;
@@ -165,13 +167,8 @@ void LieEKF::predict(){
     Vector3d predicted_acc_bias = BAccBias_;
 
     Matrix3d g_skew = skewSym(Gravity_);
-
-    Matrix3d gamma_0 = gamma(dt_ * BGyro_, 0);
-    Matrix3d gamma_1 = gamma(dt_ * BGyro_, 1);
-    Matrix3d gamma_2 = gamma(dt_ * BGyro_, 2);
     
     Matrix3d phi_skew = skewSym(dt_ * BGyro_);
-    Matrix3d acc_skew = skewSym(BAcc_);
     double phi_norm = (dt_ * BGyro_).norm();
     Matrix3d psi_1;
     Matrix3d psi_2;
@@ -215,7 +212,10 @@ void LieEKF::predict(){
     this->updateQd();
 
     this->concatStates(predicted_R, predicted_v, predicted_p, predicted_lf_p, predicted_rf_p, predicted_gyro_bias, predicted_acc_bias, xPred_, thetaPred_);
-    P_ = Phi_ * P_ * Phi_.transpose() + Qd_;
+    Ppred_ = Phi_ * P_ * Phi_.transpose() + Qd_;
+    P_ = Ppred_;
+    x_ = xPred_;
+    theta_ = thetaPred_;
 }
 
 void LieEKF::updateQd() {
@@ -236,3 +236,187 @@ void LieEKF::updateQd() {
 
     Qd_ = dt_ * Phi_ * G * Qd_ * G.transpose() * Phi_.transpose();
 }
+
+void LieEKF::updateState(VectorXd delta, const MatrixXd &prev_x, const VectorXd &prev_theta, MatrixXd &x, VectorXd &theta) {
+    x = SEK3Exp(delta.segment(0, 15)) * prev_x;
+    theta = prev_theta + delta.segment(15, 6);
+}
+
+void LieEKF::update() {
+
+    if(contact_[0] == 1 && contact_[1] == 1){
+
+        Hd_ = MatrixXd::Zero(6, statesErrDim_);
+        Y_ = MatrixXd::Zero(14, 1);
+        Rd_ = MatrixXd::Zero(6, 6);
+        b_ = MatrixXd::Zero(14, 1);
+        PI_ = MatrixXd::Zero(6, 14);
+        BigX_ = MatrixXd::Zero(14, 14);
+
+        Y_.segment(0, GLeftFootPos_.size()) = BLFootMeasured_;
+        Y_.segment(GLeftFootPos_.size(), 4) = Vector4d(0, 1, -1, 0);
+
+        b_.segment(4, 3) = Vector3d(1, -1, 0);
+
+        Hd_.block(0, 0, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 6, 3, 3) = -Matrix3d::Identity();
+        Hd_.block(0, 9, 3, 3) = Matrix3d::Identity();
+        Hd_.block(0, 12, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 18, 3, 3) = Matrix3d::Zero();
+        
+        Rd_.block(0, 0, 3, 3) = pow(measurementNoiseStd_, 2) * Matrix3d::Identity();
+
+        PI_.block(0, 0, 3, 3) = Matrix3d::Identity();
+
+        BigX_.block(0, 0, 7, 7) = xPred_;
+
+        Y_.segment(7, GRightFootPos_.size()) = BRFootMeasured_;
+        Y_.segment(10, 4) = Vector4d(0, 1, 0, -1);
+
+        b_.segment(11, 3) = Vector3d(1, 0, -1);
+
+        Hd_.block(3, 0, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 6, 3, 3) = -Matrix3d::Identity();
+        Hd_.block(3, 9, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 12, 3, 3) = Matrix3d::Identity();
+        Hd_.block(3, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(3, 18, 3, 3) = Matrix3d::Zero();
+        
+        Rd_.block(3, 3, 3, 3) = pow(measurementNoiseStd_, 2) * Matrix3d::Identity();
+
+        PI_.block(3, 7, 3, 3) = Matrix3d::Identity();
+
+        BigX_.block(7, 7, 7, 7) = xPred_;
+
+    }else if(contact_[0] == 1 && contact_[1] == 0){
+        
+        Hd_ = MatrixXd::Zero(3, statesErrDim_);
+        Y_ = MatrixXd::Zero(7, 1);
+        Rd_ = MatrixXd::Zero(3, 3);
+        b_ = MatrixXd::Zero(7, 1);
+        PI_ = MatrixXd::Zero(3, 7);
+        BigX_ = MatrixXd::Zero(7, 7);
+
+        Y_.segment(0, GLeftFootPos_.size()) = BLFootMeasured_;
+        Y_.segment(GLeftFootPos_.size(), 4) = Vector4d(0, 1, -1, 0);
+
+        b_.segment(4, 3) = Vector3d(1, -1, 0);
+
+        Hd_.block(0, 0, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 6, 3, 3) = -Matrix3d::Identity();
+        Hd_.block(0, 9, 3, 3) = Matrix3d::Identity();
+        Hd_.block(0, 12, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 18, 3, 3) = Matrix3d::Zero();
+        
+        Rd_.block(0, 0, 3, 3) = pow(measurementNoiseStd_, 2) * Matrix3d::Identity();
+
+        PI_.block(0, 0, 3, 3) = Matrix3d::Identity();
+
+        BigX_.block(0, 0, 7, 7) = xPred_;
+
+    }else if(contact_[0] == 0 && contact_[1] == 1){
+        
+        Hd_ = MatrixXd::Zero(3, statesErrDim_);
+        Y_ = MatrixXd::Zero(7, 1);
+        Rd_ = MatrixXd::Zero(3, 3);
+        b_ = MatrixXd::Zero(7, 1);
+        PI_ = MatrixXd::Zero(3, 7);
+        BigX_ = MatrixXd::Zero(7, 7);
+
+        Y_.segment(0, GRightFootPos_.size()) = BRFootMeasured_;
+        Y_.segment(GRightFootPos_.size(), 4) = Vector4d(0, 1, 0, -1);
+
+        b_.segment(4, 3) = Vector3d(1, 0, -1);
+
+        Hd_.block(0, 0, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 3, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 6, 3, 3) = -Matrix3d::Identity();
+        Hd_.block(0, 9, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 12, 3, 3) = Matrix3d::Identity();
+        Hd_.block(0, 15, 3, 3) = Matrix3d::Zero();
+        Hd_.block(0, 18, 3, 3) = Matrix3d::Zero();
+        
+        Rd_.block(0, 0, 3, 3) = pow(measurementNoiseStd_, 2) * Matrix3d::Identity();
+
+        PI_.block(0, 0, 3, 3) = Matrix3d::Identity();
+
+        BigX_.block(0, 0, 7, 7) = xPred_;
+    }
+
+    Sd_ = Hd_ * Ppred_ * Hd_.transpose() + Rd_;
+    Kd_ = Ppred_ * Hd_.transpose() * Sd_.inverse();
+    deltaX_ = Kd_ * PI_ * (BigX_ * Y_ - b_);
+
+    this->updateState(deltaX_, xPred_, thetaPred_, x_, theta_);
+
+    MatrixXd I = MatrixXd::Identity(statesErrDim_, statesErrDim_);
+    P_ = (I - Kd_ * Hd_) * Ppred_ * (I - Kd_ * Hd_).transpose() + Kd_ * Rd_ * Kd_.transpose();
+}
+
+void LieEKF::runFilter(Vector3d gyro, Vector3d acc, Vector3d lfpmeasured, Vector3d rfpmeasured, Matrix3d lfrot, Matrix3d rfrot, int* contact, bool update_enaled) {
+    updateEnabled_ = update_enaled;
+    contact_[0] = contact[0];
+    contact_[1] = contact[1];
+    this->setSensorData(gyro, acc);
+    this->setMeasuredData(lfpmeasured, rfpmeasured, lfrot, rfrot);
+    this->predict();
+
+    if(updateEnabled_){
+        this->update();
+    }
+    xPrev_ = x_;
+    thetaPrev_ = theta_;
+
+    cout << GBasePos_(0) << ", " << GBasePos_(1) << ", " << GBasePos_(2) << ", ";
+    cout << GBaseVel_(0) << ", " << GBaseVel_(1) << ", " << GBaseVel_(2) << ", ";
+    cout << GLeftFootPos_(0) << ", " << GLeftFootPos_(1) << ", " << GLeftFootPos_(2) << ", ";
+    cout << GRightFootPos_(0) << ", " << GRightFootPos_(1) << ", " << GRightFootPos_(2) << endl;
+    // for(int i=0; i < 21; i++){
+    //     cout << P_(i, i) << ", ";
+    // }
+    // cout << endl;
+}
+
+// vector<string> parseString(string str, char delimiter) {
+//     vector<string> result;
+//     stringstream ss(str);
+//     string item;
+//     while (getline(ss, item, delimiter)) {
+//         result.push_back(item);
+//     }
+//     return result;
+// }
+
+// int main() {
+//     LieEKF estimator;
+//     estimator.setDt(0.002);
+//     ifstream file;
+//     string line;
+//     file.open("turnData'.csv");
+//     int i = 0;
+//     std::default_random_engine generator;
+//     std::normal_distribution<double> dist(0.0, 0.1);
+//     while(i < 6999){
+//         getline(file, line);
+//         vector<string> data = parseString(line, ',');
+//         Vector3d gyro(stod(data[0]) + dist(generator), stod(data[1]) + dist(generator), stod(data[2]) + dist(generator));
+//         // Vector3d gyro(1, 2, 3);
+//         Vector3d acc(stod(data[3]) + dist(generator), stod(data[4]) + dist(generator), stod(data[5]) + dist(generator));
+//         // Vector3d acc(4,5,6);
+//         Vector3d rfmeasured(stod(data[6]), stod(data[7]), stod(data[8]));
+//         Vector3d lfmeasured(stod(data[9]), stod(data[10]), stod(data[11]));
+//         Matrix3d rfrot = Quaterniond(stod(data[12]), stod(data[13]), stod(data[14]), stod(data[15])).toRotationMatrix();
+//         Matrix3d lfrot = Quaterniond(stod(data[16]), stod(data[17]), stod(data[18]), stod(data[19])).toRotationMatrix();
+//         int contact[] = {stoi(data[21]), stoi(data[20])};
+//         estimator.runFilter(gyro, acc, lfmeasured, rfmeasured, lfrot, rfrot, contact, true);
+//         // if((i + 1) % 80 == 0)
+//         //     estimator.initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
+//         i++;
+//     }
+//     return 0;
+// }

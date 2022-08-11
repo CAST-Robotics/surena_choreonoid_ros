@@ -72,7 +72,6 @@ Matrix3d gamma(const Vector3d &vec, int n) {
     }
 }
 
-
 MatrixXd adjoint(const MatrixXd &X){
     int n = X.rows();
     int size = (n - 2) * 3;
@@ -87,5 +86,36 @@ MatrixXd adjoint(const MatrixXd &X){
     output.block(6, 0, 3, 3) = skewSym(X.block(0, 4, 3, 1)) * R;
     output.block(9, 0, 3, 3) = skewSym(X.block(0, 5, 3, 1)) * R;
     output.block(12, 0, 3, 3) = skewSym(X.block(0, 6, 3, 1)) * R;
+    return output;
+}
+
+MatrixXd SEK3Exp(const VectorXd &vec){
+    int k = (vec.size() - 3) / 3;
+    Vector3d w = vec.segment(0, 3);
+    MatrixXd output = MatrixXd::Identity(3 + k, 3 + k);
+    
+    // Exp_SO3(w)
+    Matrix3d R;
+    Matrix3d A = skewSym(w);
+    double theta = w.norm();
+    if(theta == 0){
+        R = Matrix3d::Identity();
+    }else{
+        R = Matrix3d::Identity() + (sin(theta) / theta) * A + (1 - cos(theta)) / (theta * theta) * A * A;
+    }
+    output.block(0, 0, 3, 3) = R;
+
+    // LeftJacobian_SO3(w)
+    Matrix3d J;
+    if(theta == 0){
+        J = Matrix3d::Identity();
+    }else{
+        J = Matrix3d::Identity() + (1 - cos(theta)) / (theta * theta) * A + (theta - sin(theta)) / (theta * theta * theta) * A * A;
+    }
+    MatrixXd temp = MatrixXd::Zero(3, k);
+    for(int i = 0; i < k; i++){
+        temp.block(0, i, 3, 1) = vec.segment(3 * (i + 1), 3);
+    }
+    output.block(0, 3, 3, k) = J * temp;
     return output;
 }
