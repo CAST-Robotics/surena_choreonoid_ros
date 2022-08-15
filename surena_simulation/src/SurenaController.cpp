@@ -114,9 +114,9 @@ public:
         traj.request.t_step = 1.0;
         traj.request.step_length = 0.17;
         traj.request.COM_height = 0.68;
-        traj.request.step_count = 12;
-        traj.request.ankle_height = 0.035;
-        traj.request.theta = 0.1;
+        traj.request.step_count = 4;
+        traj.request.ankle_height = 0.025;
+        traj.request.theta = 0.0;
         traj.request.dt = dt;
         result = traj.response.result;
         
