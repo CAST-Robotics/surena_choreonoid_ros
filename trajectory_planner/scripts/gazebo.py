@@ -25,7 +25,7 @@ def gazebo_sender():
 
     rospy.wait_for_service("/general_traj")
     general_motion_handle = rospy.ServiceProxy("/general_traj", GeneralTraj)
-    init_com_pos = [0, 0, 0.71]
+    init_com_pos = [0, 0, 0.68]
     init_com_orient = [0, 0, 0]  
     final_com_pos = [0, 0, 0.68]
     final_com_orient = [0, 0, 0]

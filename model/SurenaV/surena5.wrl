@@ -123,14 +123,14 @@ PROTO Humanoid [
 
 
 PROTO VisionSensor [
-  exposedField SFVec3f    translation       0 0 0
-  exposedField SFRotation rotation          0 0 1 0
+  exposedField SFVec3f    translation       0.1 0.1 0.1
+  exposedField SFRotation rotation          0.5770438 -0.5775035 -0.5775035 2.094755
   exposedField MFNode     children          [ ]
   exposedField SFFloat    fieldOfView       0.785398
   exposedField SFString   name              ""
   exposedField SFFloat    frontClipDistance 0.01
   exposedField SFFloat    backClipDistance  10.0
-  exposedField SFString   type              "NONE"
+  exposedField SFString   type              "COLOR_DEPTH"
   exposedField SFInt32    sensorId          -1
   exposedField SFInt32    width             320
   exposedField SFInt32    height            240
@@ -319,6 +319,7 @@ DEF SURENA5 Humanoid {
       translation 0 0 0.90264
       children [
         DEF WaistAccelSensor AccelerationSensor { sensorId 0 }
+        DEF camera VisionSensor {sensorId 0}
         DEF WaistGyro Gyro { sensorId 0 }
         DEF Pelvis_LINK Segment {
               centerOfMass   0.00818 -0.00179 0.16869

@@ -1,4 +1,5 @@
 choreonoid_add_simple_controller(SurenaController SurenaController.cpp)
 target_link_libraries(SurenaController ${catkin_LIBRARIES})
 
-
+choreonoid_add_simple_controller(CameraController CameraController.cpp)
+target_link_libraries(CameraController ${catkin_LIBRARIES})
