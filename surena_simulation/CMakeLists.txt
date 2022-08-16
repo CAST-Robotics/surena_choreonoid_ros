@@ -4,8 +4,10 @@ project(surena_simulation)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  sensor_msgs
   trajectory_planner
   choreonoid
+  image_transport
   message_generation
   actionlib_msgs
   )
@@ -18,6 +20,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
   #std_srvs
 )
 
