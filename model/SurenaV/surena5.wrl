@@ -128,12 +128,12 @@ PROTO VisionSensor [
   exposedField MFNode     children          [ ]
   exposedField SFFloat    fieldOfView       0.785398
   exposedField SFString   name              ""
-  exposedField SFFloat    frontClipDistance 0.01
-  exposedField SFFloat    backClipDistance  10.0
+  exposedField SFFloat    frontClipDistance 0.5
+  exposedField SFFloat    backClipDistance  7.0
   exposedField SFString   type              "COLOR_DEPTH"
   exposedField SFInt32    sensorId          -1
-  exposedField SFInt32    width             320
-  exposedField SFInt32    height            240
+  exposedField SFInt32    width             640
+  exposedField SFInt32    height            480
   exposedField SFFloat    frameRate         30
 ]
 {
