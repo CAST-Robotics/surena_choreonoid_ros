@@ -42,6 +42,9 @@ class LieEKF {
 
         void runFilter(Vector3d gyro, Vector3d acc, Vector3d lfpmeasured, Vector3d rfpmeasured, Matrix3d lfrot, Matrix3d rfrot, int* contact, bool update_enaled);
 
+        Vector3d getGBasePose();
+        Vector3d getGBaseVel();
+        Quaterniond getGBaseQuat();
     
     private:
         Vector3d GLeftFootPos_;

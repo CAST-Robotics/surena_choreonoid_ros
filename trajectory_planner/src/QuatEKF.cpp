@@ -66,6 +66,18 @@ QuatEKF::~QuatEKF() {
 
 }
 
+Vector3d QuatEKF::getGBasePose(){
+    return GBasePos_;
+}
+
+Vector3d QuatEKF::getGBaseVel(){
+    return GBaseVel_;
+}
+
+Quaterniond QuatEKF::getGBaseQuat(){
+    return GBaseQuat_;
+}
+
 void QuatEKF::initializeStates(Quaterniond q, Vector3d base_vel, Vector3d base_pos, Vector3d lf_pos, 
                                Vector3d rf_pos, Vector3d gyro_bias, Vector3d acc_bias){
     GBaseQuat_ = q;

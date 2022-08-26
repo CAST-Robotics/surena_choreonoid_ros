@@ -52,6 +52,19 @@ LieEKF::LieEKF(){
 
 LieEKF::~LieEKF(){}
 
+Vector3d LieEKF::getGBasePose(){
+    return GBasePos_;
+}
+
+Vector3d LieEKF::getGBaseVel(){
+    return GBaseVel_;
+}
+
+Quaterniond LieEKF::getGBaseQuat(){
+    Quaterniond q(GBaseRot_);
+    return q;
+}
+
 void LieEKF::initializeStates(Matrix3d R, Vector3d base_vel, Vector3d base_pos, Vector3d lf_pos, 
                               Vector3d rf_pos, Vector3d gyro_bias, Vector3d acc_bias){
     GBaseRot_ = R;
