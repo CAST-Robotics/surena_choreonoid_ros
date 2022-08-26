@@ -316,7 +316,7 @@ DEF SURENA5 Humanoid {
 
     DEF Pelvis Joint {
       jointType "free"
-      translation 0 0 0.90264
+      translation 0 0 0.6
       children [
         DEF WaistAccelSensor AccelerationSensor { sensorId 0 }
         DEF camera VisionSensor {sensorId 0}

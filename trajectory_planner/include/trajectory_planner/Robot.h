@@ -6,6 +6,7 @@
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/GeneralTraj.h"
+#include "nav_msgs/Odometry.h"
 
 #include "DCM.h"
 #include "Link.h"
@@ -45,6 +46,8 @@ class Robot{
         int findTrajIndex(vector<int> arr, int n, int K);
 
         void distributeFT(Vector3d zmp_y, Vector3d r_foot_y,Vector3d l_foot_y, Vector3d &r_wrench, Vector3d &l_wrench);
+
+        void baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat);
     private:
 
         double thigh_;
@@ -120,6 +123,9 @@ class Robot{
         ros::ServiceServer trajGenServer_;
         ros::ServiceServer generalTrajServer_;
         ros::ServiceServer resetTrajServer_;
+
+        ros::Publisher baseOdomPub_;
+
         bool isTrajAvailable_;
         bool useController_;
 
