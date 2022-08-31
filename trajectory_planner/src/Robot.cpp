@@ -25,6 +25,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     resetTrajServer_ = nh->advertiseService("/reset_traj",
             &Robot::resetTrajCallback, this);
 
+    baseOdomPub_ = nh->advertise<nav_msgs::Odometry>("/odom", 50);
     // PreviewTraj traj(0.68, 320);
     // traj.computeWeight();
     // traj.computeTraj();
@@ -102,7 +103,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     links_[12] = lAnkleR;
 
     onlineWalk_ = robot_ctrl;
-    // EKF_ = new EKFEstimator();
+    //quatEKF_ = new QuatEKF();
+    lieEKF_ = new LieEKF();
 
     //cout << "Robot Object has been Created" << endl;
 }
@@ -116,22 +118,40 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     links_[12]->FK();
     links_[6]->FK();    // update all raw values of sensors and link states
     updateState(config, torque_r, torque_l, f_r, f_l, gyro, accelerometer);
-    //EKF_->runFilter(accelerometer, gyro, links_[6]->getPose(), links_[12]->getPose());
+    int contact[2];
+    if(robotState_[iter] == 2){
+        contact[0] = 0;
+        contact[1] = 1;
+    }else if(robotState_[iter] == 3){
+        contact[0] = 1;
+        contact[1] = 0;
+    }else{
+        contact[0] = 1;
+        contact[1] = 1;
+    }
+    // add noise to the sensor values
+    std::default_random_engine generator;
+    generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
+    std::normal_distribution<double> dist(0.0, 0.1);
+    // quatEKF_->setDt(dt_);
+    lieEKF_->setDt(dt_);
+    lieEKF_->runFilter(gyro, accelerometer, links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
+    baseOdomPublisher(lieEKF_->getGBasePose(), lieEKF_->getGBaseVel(),lieEKF_->getGBaseQuat());
     // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";
     // cout << accelerometer(0) << ',' << accelerometer(1) << ',' << accelerometer(2) << ",";
     // cout << links_[6]->getPose()(0) << ',' << links_[6]->getPose()(1) << ',' << links_[6]->getPose()(2) << ",";
     // cout << links_[12]->getPose()(0) << ',' << links_[12]->getPose()(1) << ',' << links_[12]->getPose()(2) << ",";
     Quaterniond rankle_quat(links_[6]->getRot());
     Quaterniond lankle_quat(links_[12]->getRot());
-    cout << rankle_quat.w() << ',' << rankle_quat.x() << ',' << rankle_quat.y() << ',' << rankle_quat.z() << ",";
-    cout << lankle_quat.w() << ',' << lankle_quat.x() << ',' << lankle_quat.y() << ',' << lankle_quat.z() << ",";
-    if(robotState_[iter] == 2){
-        cout << 1 << "," << 0 << endl;
-    }else if(robotState_[iter] == 3){
-        cout << 0 << "," << 1 << endl;
-    }else{
-        cout << 1 << "," << 1 << endl;
-    }
+    // cout << rankle_quat.w() << ',' << rankle_quat.x() << ',' << rankle_quat.y() << ',' << rankle_quat.z() << ",";
+    // cout << lankle_quat.w() << ',' << lankle_quat.x() << ',' << lankle_quat.y() << ',' << lankle_quat.z() << ",";
+    // if(robotState_[iter] == 2){
+    //     cout << 1 << "," << 0 << endl;
+    // }else if(robotState_[iter] == 3){
+    //     cout << 0 << "," << 1 << endl;
+    // }else{
+    //     cout << 1 << "," << 1 << endl;
+    // }
     MatrixXd lfoot(3,1);
     MatrixXd rfoot(3,1);
     Matrix3d attitude = MatrixXd::Identity(3,3);
@@ -723,6 +743,28 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
     Vector3d position(0.0, 0.0, 0.0);
     links_[0]->initPose(position, Matrix3d::Identity(3, 3));
     return true;
+}
+
+void Robot::baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat){
+    nav_msgs::Odometry odom;
+    odom.header.stamp = ros::Time::now();
+    odom.header.frame_id = "odom";
+
+    odom.pose.pose.position.x = base_pos(0);
+    odom.pose.pose.position.y = base_pos(1);
+    odom.pose.pose.position.z = base_pos(2);
+
+    odom.pose.pose.orientation.x = base_quat.x();
+    odom.pose.pose.orientation.y = base_quat.y();
+    odom.pose.pose.orientation.z = base_quat.z();
+    odom.pose.pose.orientation.w = base_quat.w();
+
+    odom.twist.twist.linear.x = base_vel(0);
+    odom.twist.twist.linear.y = base_vel(1);
+    odom.twist.twist.angular.z = base_vel(2);
+
+    //publish the message
+    baseOdomPub_.publish(odom);
 }
 
 Robot::~Robot(){

@@ -12,7 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   rospy
   std_msgs
+  geometry_msgs
   std_srvs
+  nav_msgs
   message_generation
   choreonoid
 )
@@ -92,6 +94,8 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  nav_msgs
+  geometry_msgs
   std_srvs
 )
 
