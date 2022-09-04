@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   std_srvs
   nav_msgs
+  tf
   message_generation
   choreonoid
 )

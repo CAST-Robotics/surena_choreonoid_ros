@@ -7,6 +7,7 @@
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/GeneralTraj.h"
 #include "nav_msgs/Odometry.h"
+#include <tf/transform_broadcaster.h> 
 
 #include "DCM.h"
 #include "Link.h"
@@ -125,6 +126,7 @@ class Robot{
         ros::ServiceServer resetTrajServer_;
 
         ros::Publisher baseOdomPub_;
+        tf::TransformBroadcaster baseOdomBroadcaster_;
 
         bool isTrajAvailable_;
         bool useController_;

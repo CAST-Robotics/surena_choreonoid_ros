@@ -95,7 +95,6 @@ items:
           name: "SURENA5"
           plugin: Body
           class: BodyItem
-          is_selected: true
           is_checked: true
           data: 
             file: "../model/SurenaV/surena5.wrl"
@@ -175,6 +174,32 @@ items:
                   - 
                     class: CameraImageVisualizerItem
                     name: camera_Image
+        - 
+          id: 9
+          name: "Floor"
+          plugin: Body
+          class: BodyItem
+          is_checked: true
+          data: 
+            file: "../../choreonoid/share/model/misc/floor.body"
+            format: CHOREONOID-BODY
+            rootPosition: [ 0, 0, -0.1 ]
+            rootAttitude: [ 
+              1, 0, 0, 
+              0, 1, 0, 
+              0, 0, 1 ]
+            jointPositions: [  ]
+            initialRootPosition: [ 0, 0, -0.1 ]
+            initialRootAttitude: [ 
+              1, 0, 0, 
+              0, 1, 0, 
+              0, 0, 1 ]
+            staticModel: true
+            collisionDetection: true
+            selfCollisionDetection: false
+            location_editable: true
+            scene_sensitive: true
+            zmp: [ 0, 0, 0 ]
 views: 
   - 
     id: 0
@@ -294,10 +319,13 @@ views:
     state: 
       element_type: all
       listingMode: list
-      current_body_item: 5
+      current_body_item: 9
       body_items: 
         - 
           id: 2
+          selected_links: [ 0 ]
+        - 
+          id: 5
           selected_links: [ 0 ]
   - 
     id: 8
@@ -384,8 +412,8 @@ Body:
   "BodyMotionEngine": 
     updateJointVelocities: false
   "BodySelectionManager": 
-    current_body_item: 5
-    current_link: "Pelvis"
+    current_body_item: 9
+    current_link: "Floor"
   "EditableSceneBody": 
     editableSceneBodies: 
       - 
@@ -395,6 +423,11 @@ Body:
         show_zmp: false
       - 
         bodyItem: 5
+        show_cm: false
+        show_cm_projection: false
+        show_zmp: false
+      - 
+        bodyItem: 9
         show_cm: false
         show_cm_projection: false
         show_zmp: false

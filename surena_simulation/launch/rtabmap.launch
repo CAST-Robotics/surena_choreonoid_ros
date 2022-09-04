@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <launch>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera_tf" args="0 0 0 -1.57 0 -1.57 base_link camera 10" />
   <group ns="rtabmap">
     <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
       <param name="frame_id"            type="string" value="base_link"/>
@@ -11,7 +13,6 @@
 
       <remap from="odom"       to="/odom"/>
       <remap from="rgb/image"       to="/image_raw"/>
-      <remap from="depth/image"     to="/depth_image_raw"/>
       <remap from="rgb/camera_info" to="/camera_info"/>
       <remap from="scan_cloud"      to="/point_cloud"/>
       

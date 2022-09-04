@@ -103,7 +103,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     links_[12] = lAnkleR;
 
     onlineWalk_ = robot_ctrl;
-    //quatEKF_ = new QuatEKF();
+    quatEKF_ = new QuatEKF();
     lieEKF_ = new LieEKF();
 
     //cout << "Robot Object has been Created" << endl;
@@ -133,10 +133,12 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     std::default_random_engine generator;
     generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
     std::normal_distribution<double> dist(0.0, 0.1);
-    // quatEKF_->setDt(dt_);
+    quatEKF_->setDt(dt_);
     lieEKF_->setDt(dt_);
+    //quatEKF_->runFilter(gyro + Vector3d(dist(generator), dist(generator), dist(generator)), accelerometer + Vector3d(dist(generator), dist(generator), dist(generator)), links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
     lieEKF_->runFilter(gyro, accelerometer, links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
-    baseOdomPublisher(lieEKF_->getGBasePose(), lieEKF_->getGBaseVel(),lieEKF_->getGBaseQuat());
+    baseOdomPublisher(lieEKF_->getGBasePose(), lieEKF_->getGBaseVel(), lieEKF_->getGBaseQuat());
+    //baseOdomPublisher(quatEKF_->getGBasePose(), quatEKF_->getGBaseVel(), quatEKF_->getGBaseQuat());
     // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";
     // cout << accelerometer(0) << ',' << accelerometer(1) << ',' << accelerometer(2) << ",";
     // cout << links_[6]->getPose()(0) << ',' << links_[6]->getPose()(1) << ',' << links_[6]->getPose()(2) << ",";
@@ -746,6 +748,23 @@ bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
 }
 
 void Robot::baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat){
+
+    geometry_msgs::TransformStamped odom_trans;
+    odom_trans.header.stamp = ros::Time::now();
+    odom_trans.header.frame_id = "odom";
+    odom_trans.child_frame_id = "base_link";
+
+    odom_trans.transform.translation.x = base_pos(0);
+    odom_trans.transform.translation.y = base_pos(1);
+    odom_trans.transform.translation.z = base_pos(2);
+
+    odom_trans.transform.rotation.x = base_quat.x();
+    odom_trans.transform.rotation.y = base_quat.y();
+    odom_trans.transform.rotation.z = base_quat.z();
+    odom_trans.transform.rotation.w = base_quat.w();
+    
+    baseOdomBroadcaster_.sendTransform(odom_trans);
+
     nav_msgs::Odometry odom;
     odom.header.stamp = ros::Time::now();
     odom.header.frame_id = "odom";
