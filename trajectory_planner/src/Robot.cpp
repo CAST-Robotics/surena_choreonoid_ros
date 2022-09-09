@@ -132,11 +132,12 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     // add noise to the sensor values
     std::default_random_engine generator;
     generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
-    std::normal_distribution<double> dist(0.0, 0.1);
+    std::normal_distribution<double> dist(0.0, 0.05);
+    std::normal_distribution<double> dist1(0.0, 0.15);
     quatEKF_->setDt(dt_);
     lieEKF_->setDt(dt_);
     //quatEKF_->runFilter(gyro + Vector3d(dist(generator), dist(generator), dist(generator)), accelerometer + Vector3d(dist(generator), dist(generator), dist(generator)), links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
-    lieEKF_->runFilter(gyro, accelerometer, links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
+    lieEKF_->runFilter(gyro + Vector3d(dist(generator), dist(generator), dist(generator)), accelerometer + Vector3d(dist1(generator), dist1(generator), dist1(generator)), links_[12]->getPose(), links_[6]->getPose(), links_[12]->getRot(), links_[6]->getRot(), contact, true);
     baseOdomPublisher(lieEKF_->getGBasePose(), lieEKF_->getGBaseVel(), lieEKF_->getGBaseQuat());
     //baseOdomPublisher(quatEKF_->getGBasePose(), quatEKF_->getGBaseVel(), quatEKF_->getGBaseQuat());
     // cout << gyro(0) << ',' << gyro(1) << ',' << gyro(2) << ",";

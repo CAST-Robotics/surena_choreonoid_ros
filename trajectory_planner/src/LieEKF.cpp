@@ -42,10 +42,10 @@ LieEKF::LieEKF(){
     Ppred_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     Phi_ = MatrixXd::Identity(statesErrDim_, statesErrDim_);
     // default initial covaricance matrix
-    this->initializeCovariance(0.1, 0.1, 0.1, 0.1, 0.1, 0.1);
+    this->initializeCovariance(0.1, 0.15, 0.1, 0.1, 0.2, 0.2);
 
     // default process and measurement noise
-    this->setNoiseStd(0.1, 0.1, 0.1, 0.1, 0.1, 0.05);
+    this->setNoiseStd(0.05, 0.08, 0.001, 0.001, 0.1, 0.05);
 
     updateEnabled_ = true;
 }
@@ -386,9 +386,7 @@ void LieEKF::runFilter(Vector3d gyro, Vector3d acc, Vector3d lfpmeasured, Vector
     thetaPrev_ = theta_;
 
     cout << GBasePos_(0) << ", " << GBasePos_(1) << ", " << GBasePos_(2) << ", ";
-    cout << GBaseVel_(0) << ", " << GBaseVel_(1) << ", " << GBaseVel_(2) << ", ";
-    cout << GLeftFootPos_(0) << ", " << GLeftFootPos_(1) << ", " << GLeftFootPos_(2) << ", ";
-    cout << GRightFootPos_(0) << ", " << GRightFootPos_(1) << ", " << GRightFootPos_(2) << endl;
+    cout << getGBaseQuat().w() << ", " << getGBaseQuat().x() << ", "<<getGBaseQuat().y() << ", "<<getGBaseQuat().z() << endl;
     // for(int i=0; i < 21; i++){
     //     cout << P_(i, i) << ", ";
     // }

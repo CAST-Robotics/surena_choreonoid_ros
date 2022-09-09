@@ -33,13 +33,13 @@
       <param name="Mem/RehearsalSimilarity"      type="string" value="0.30"/>
     </node>
     
-    <!-- <node name="rtabmap_odom" pkg="rtabmap_ros" type="rgbd_odometry" output="screen">
+    <node name="rtabmap_odom" pkg="rtabmap_ros" type="rgbd_odometry" output="screen">
           <param name="frame_id"            type="string" value="base_link"/>
           <param name="approx_sync"        type="bool" value="true"/> 
 
           <remap from="rgb/image"       to="/image_raw"/>
       	  <remap from="depth/image"     to="/depth_image_raw"/>
       	  <remap from="rgb/camera_info" to="/camera_info"/>
-    </node> -->
+    </node>
   </group>
 </launch>

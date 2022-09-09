@@ -104,6 +104,7 @@ public:
         general_traj.request.time = 2;
         general_traj.request.dt = dt;
 
+        gen_client.call(general_traj);
         //DCM Walk
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
@@ -114,19 +115,18 @@ public:
         traj.request.t_step = 1.0;
         traj.request.step_length = -0.17;
         traj.request.COM_height = 0.68;
-        traj.request.step_count = 4;
+        traj.request.step_count = 12;
         traj.request.ankle_height = 0.025;
         traj.request.theta = 0.15;
         traj.request.dt = dt;
         result = traj.response.result;
-        
+        client.call(traj);
+
         size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
         // size_ = int((general_traj.request.time) / traj.request.dt);
 
         result = true;
 
-        gen_client.call(general_traj);
-        client.call(traj);
         
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
@@ -197,8 +197,8 @@ public:
             
             Vector3d left_ankle_pos = l_ankle.block<3,1>(0, 3);
             Vector3d right_ankle_pos = r_ankle.block<3,1>(0, 3);
-            // cout << base_pos(0) << "," << base_pos(1) << "," << base_pos(2) << ",";
-            // cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << ",";
+            cout << base_pos(0) << "," << base_pos(1) << "," << base_pos(2) << ",";
+            cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << endl;
             // cout << left_ankle_pos(0) << "," << left_ankle_pos(1) << "," << left_ankle_pos(2) << ",";
             // cout << right_ankle_pos(0) << "," << right_ankle_pos(1) << "," << right_ankle_pos(2) << endl;
             for(int i = 0; i < 16; i ++){
