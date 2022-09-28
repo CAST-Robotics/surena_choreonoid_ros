@@ -20,7 +20,7 @@ using namespace Eigen;
 
 class PreviewTraj {
     public:
-        PreviewTraj(double robot_height, int n);
+        PreviewTraj(double robot_height, int n=320, double dt=0.005);
 
         void setDt(double dt);
         void computeWeight();

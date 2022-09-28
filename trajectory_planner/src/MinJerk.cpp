@@ -1,5 +1,9 @@
 #include "MinJerk.h"
 
+MinJerk::MinJerk(bool use_file, double dt) : useFile_(use_file), dt_(dt){}
+
+MinJerk::~MinJerk(){}
+
 Vector3d* MinJerk::poly6Interpolate(Vector3d x_ini, Vector3d x_mid, Vector3d x_f, double tf){
     /* 
         This function fits a 5th order (C2) Polynomial to given given inputs
@@ -59,4 +63,78 @@ Vector3d* MinJerk::minJerkInterpolate(Vector3d theta_ini, Vector3d theta_f, Vect
     coefs[2] = 3/pow(tf,2) * (theta_f - theta_ini) - 1/tf * (2 * theta_dot_ini + theta_dot_f);
     coefs[3] = -2/pow(tf,3) * (theta_f - theta_ini) + 1/pow(tf,2) * (theta_dot_ini + theta_dot_f);
     return coefs;
+}
+
+void MinJerk::setConfigPath(string config_path){
+    config_ = YAML::LoadFile(config_path);
+    this->parseConfig(config_);
+}
+
+void MinJerk::parseConfig(YAML::Node config){
+    initDSPDuration_ = config["init_dsp_duration"].as<double>();
+    DSPDuration_ = config["dsp_duration"].as<double>();
+    SSPDuration_ = config["ssp_duration"].as<double>();
+    finalDSPDuration_ = config["final_dsp_duration"].as<double>();
+    footStepCount_ = config["footsteps"].size();
+    for(int i=0; i<footStepCount_; i++){
+        Vector3d temp(config["footsteps"][i][0].as<double>(), config["footsteps"][i][1].as<double>(), config["footsteps"][i][2].as<double>());
+        footSteps_.push_back(temp);
+    }
+    trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
+}
+
+int MinJerk::getTrajSize(){
+    return trajSize_;
+}
+
+void MinJerk::cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points){
+    
+    int n = way_points.rows();
+    int p = way_points.cols();
+
+    double time_span = time_points(p-1) - time_points(0);
+    int len = time_span / dt;
+    MatrixXd q = MatrixXd::Zero(n, len);
+    
+    int coef_dim = 4;
+    MatrixXd coef_mat = MatrixXd::Zero((p-1)*n, coef_dim);
+    
+    for(int i=0; i<p-1; i++){
+        double final_time = time_points(i+1) - time_points(i);
+        for(int j=0; j<n; j++){
+            int ridx = i * n + j;
+            double points[2] = {way_points(j, i), way_points(j, i+1)};
+            double vels[2] = {vel_points(j, i), vel_points(j, i+1)};
+            coef_mat.block(ridx, 0, 1, 4) = genCubicCoeffs(points, vels, final_time).transpose();
+            }
+    }
+    for(int i=0; i < len; i++){
+        double t = i * dt;
+        for(int j=0; j<p-1; j++){
+            if((t < time_points(j+1) && t >= time_points(j)) || t == time_points(p-1)){
+                double time = t - time_points[j];
+                Vector4d time_vec{1, time, pow(time, 2), pow(time, 3)};
+                q.col(i) = coef_mat.block(j*n, 0, n, 4) * (time_vec);
+            }
+        }
+        for(int j=0;j<n;j++){
+            cout << q(j, i) << ", ";
+        }
+        cout << endl;
+    }
+}
+
+Vector4d MinJerk::genCubicCoeffs(const double pos_pts[], const double vel_pts[], double final_time){
+    
+    Vector4d coeff_vec{pos_pts[0], vel_pts[0], 0, 0};
+    MatrixXd t_mat{
+        {1, final_time},
+        {0, 1}};
+    Vector2d B = Vector2d(pos_pts[1], vel_pts[1]) - t_mat * coeff_vec.segment(0, 2);
+    MatrixXd inv_t_mat{
+        {3.0 / pow(final_time, 2), -1.0 / final_time},
+        {-2.0 / pow(final_time, 3), 1.0 / pow(final_time, 2)}};
+
+    coeff_vec.segment(2,2) = inv_t_mat * B;
+    return coeff_vec;
 }

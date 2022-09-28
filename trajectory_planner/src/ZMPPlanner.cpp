@@ -1,25 +1,15 @@
 #include "ZMPPlanner.h"
 
-ZMPPlanner::ZMPPlanner(double dt, string config_path) : dt_(dt){
-    config_ = YAML::LoadFile(config_path);
-    this->parseConfig(config_);
+ZMPPlanner::ZMPPlanner(bool use_file, double dt) : MinJerk(use_file, dt){
+    if(!useFile_)
+        cout << "Set Walking Parameters ..." << endl;
+    else
+        cout << "Set Config File Path ..." << endl;
 }
 
 ZMPPlanner::~ZMPPlanner(){
 }
 
-void ZMPPlanner::parseConfig(YAML::Node config){
-    initDSPDuration_ = config["init_dsp_duration"].as<double>();
-    DSPDuration_ = config["dsp_duration"].as<double>();
-    SSPDuration_ = config["ssp_duration"].as<double>();
-    finalDSPDuration_ = config["final_dsp_duration"].as<double>();
-    footStepCount_ = config["footsteps"].size();
-    for(int i=0; i<footStepCount_; i++){
-        Vector3d temp(config["footsteps"][i][0].as<double>(), config["footsteps"][i][1].as<double>(), config["footsteps"][i][2].as<double>());
-        footSteps_.push_back(temp);
-    }
-    trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
-}
 
 void ZMPPlanner::planInitialDSPZMP(){
     Vector3d init_zmp = (footSteps_[0] + footSteps_[1]) / 2;
@@ -33,13 +23,13 @@ void ZMPPlanner::planInitialDSPZMP(){
 
 void ZMPPlanner::planStepsZMP(){
     for(int i=2; i<footStepCount_ - 1; i++){
-
+        // single support phase
         Vector3d init_zmp = plannedZMP_[plannedZMP_.size() - 1];
         for(int j=0; j<int(SSPDuration_ / dt_); j++){
             plannedZMP_.push_back(init_zmp);
             // cout << init_zmp(0) << ", " << init_zmp(1) << endl;
         }
-
+        // double support phase
         init_zmp = plannedZMP_[plannedZMP_.size() - 1];
         Vector3d final_zmp = footSteps_[i];
         Vector3d* coefs = this->minJerkInterpolate(init_zmp, final_zmp, Vector3d(0, 0, 0), Vector3d(0, 0, 0), DSPDuration_);
@@ -74,8 +64,4 @@ Vector3d ZMPPlanner::getZMP(int iter){
         //cout << "ZMPPlanner::getZMP: iter out of range" << endl;
         return plannedZMP_[plannedZMP_.size() - 1];
     }
-}
-
-int ZMPPlanner::getTrajSize(){
-    return trajSize_;
 }

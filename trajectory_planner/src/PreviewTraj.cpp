@@ -1,16 +1,17 @@
 #include "PreviewTraj.h"
 
-PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_height), N_(n) {
+PreviewTraj::PreviewTraj(double robot_height, int n, double dt) : robotHeight_(robot_height), N_(n), dt_(dt) {
     
-    dt_ = 0.005;
     g_ = 9.81;
 
     A_ << 1, dt_, pow(dt_, 2) / 2,
          0, 1, dt_,
          0, 0, 1;
+
     b_ << pow(dt_, 3) / 6,
          pow(dt_, 2) / 2,
          dt_;
+
     c_ << 1, 0, -(robotHeight_ / g_);
     
     Q_ = 1 * MatrixXd::Identity(1, 1);
@@ -23,7 +24,13 @@ PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_he
     error_ = Vector3d(0, 0, 0);
 
     string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
-    ZMPPlanner_ = new ZMPPlanner(dt_, config_path);
+    ZMPPlanner_ = new ZMPPlanner(true, dt_);
+    ZMPPlanner_->setConfigPath(config_path);
+    MatrixXd a{{1, 4, 4, 3, -2, 0}};
+    MatrixXd c = MatrixXd::Zero(1, 6);
+    VectorXd b(6);
+    b << 0, 1, 2, 3, 4, 5;
+    ZMPPlanner_->cubicPolyTraj(a, b, 0.005, c);
     ZMPPlanner_->planInitialDSPZMP();
     ZMPPlanner_->planStepsZMP();
     ZMPPlanner_->planFinalDSPZMP();

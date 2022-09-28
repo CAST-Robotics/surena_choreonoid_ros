@@ -26,9 +26,9 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
             &Robot::resetTrajCallback, this);
 
     baseOdomPub_ = nh->advertise<nav_msgs::Odometry>("/odom", 50);
-    // PreviewTraj traj(0.68, 320);
-    // traj.computeWeight();
-    // traj.computeTraj();
+    PreviewTraj traj(0.68);
+    //traj.computeWeight();
+    //traj.computeTraj();
     
     // SURENA IV geometrical params
     
