@@ -1,7 +1,8 @@
 init_dsp_duration : 0.5
-ssp_duration : 1.0
+ssp_duration : 0.9
 dsp_duration : 0.1
 final_dsp_duration : 0.5
+step_height : 0.025
 footsteps:
   [
     [0.0, 0.1, 0.0],

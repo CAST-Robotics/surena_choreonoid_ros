@@ -76,25 +76,33 @@ void MinJerk::parseConfig(YAML::Node config){
     SSPDuration_ = config["ssp_duration"].as<double>();
     finalDSPDuration_ = config["final_dsp_duration"].as<double>();
     footStepCount_ = config["footsteps"].size();
+    stepHeight_ = config["step_height"].as<double>();
+    
     for(int i=0; i<footStepCount_; i++){
         Vector3d temp(config["footsteps"][i][0].as<double>(), config["footsteps"][i][1].as<double>(), config["footsteps"][i][2].as<double>());
         footSteps_.push_back(temp);
     }
+
     trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
+    
+    if(footSteps_[0](1) > 0)
+        leftFirst_ = true;
+    else
+        leftFirst_ = false;
 }
 
 int MinJerk::getTrajSize(){
     return trajSize_;
 }
 
-void MinJerk::cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points){
+void MinJerk::cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points, MatrixXd& q){
     
     int n = way_points.rows();
     int p = way_points.cols();
 
     double time_span = time_points(p-1) - time_points(0);
     int len = time_span / dt;
-    MatrixXd q = MatrixXd::Zero(n, len);
+    q = MatrixXd::Zero(n, len);
     
     int coef_dim = 4;
     MatrixXd coef_mat = MatrixXd::Zero((p-1)*n, coef_dim);
@@ -117,10 +125,6 @@ void MinJerk::cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_poi
                 q.col(i) = coef_mat.block(j*n, 0, n, 4) * (time_vec);
             }
         }
-        for(int j=0;j<n;j++){
-            cout << q(j, i) << ", ";
-        }
-        cout << endl;
     }
 }
 

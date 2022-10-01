@@ -22,7 +22,7 @@ class MinJerk{
         void setConfigPath(string config_path);
         void parseConfig(YAML::Node config);
         int getTrajSize();
-        void cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points);
+        void cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points, MatrixXd& q);
         Vector4d genCubicCoeffs(const double pos_pts[], const double vel_pts[], double final_time);
 
     protected:
@@ -33,9 +33,11 @@ class MinJerk{
         double DSPDuration_;
         double SSPDuration_;
         double finalDSPDuration_;
+        double stepHeight_;
         vector<Vector3d> footSteps_;
         int footStepCount_;
         int trajSize_;
+        bool leftFirst_;
 
         template <typename T>
         T* cubicInterpolate(T theta_ini, T theta_f, T theta_dot_ini, T theta_dot_f, double tf){
