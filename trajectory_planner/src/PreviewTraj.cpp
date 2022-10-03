@@ -44,6 +44,7 @@ PreviewTraj::PreviewTraj(double robot_height, int n, double dt) : robotHeight_(r
     y_ = new Vector3d[traj_size];
     x_[0] = x0_;
     y_[0] = x0_;
+    com_pos.push_back(Vector3d(0, 0, robotHeight_));
 }
 
 void PreviewTraj::setDt(double dt){
@@ -103,9 +104,15 @@ void PreviewTraj::computeTraj(){
         x_[i] = A_ * x_[i - 1] + ux * b_;
         y_[i] = A_ * y_[i - 1] + uy * b_;
 
-        double p = c_ * x_[i - 1];
-        cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", ";
-        p = c_ * y_[i - 1];
-        cout << y_[i](0) << ", " << y_[i](1) << ", " << y_[i](2) << ", " << p << endl;
+        // double p = c_ * x_[i - 1];
+        // cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", ";
+        // p = c_ * y_[i - 1];
+        // cout << y_[i](0) << ", " << y_[i](1) << ", " << y_[i](2) << ", " << p << endl;
+
+        com_pos.push_back(Vector3d(x_[i](0), y_[i](0), robotHeight_));
     }
+}
+
+vector<Vector3d> PreviewTraj::getCOM(){
+    return com_pos;
 }

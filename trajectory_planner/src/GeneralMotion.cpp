@@ -55,14 +55,17 @@ void GeneralMotion::changeInPlace(Vector3d init_com_pos, Vector3d final_com_pos,
         double t = index * dt_;
         // COM Trajectories
         COMPos_[index] = com_pos_coefs[0] + com_pos_coefs[1] * t + com_pos_coefs[2] * pow(t,2) + com_pos_coefs[3] * pow(t,3);
+        com.push_back(COMPos_[index]);
         temp_com_orient = com_orient_coefs[0] + com_orient_coefs[1] * t + com_orient_coefs[2] * pow(t,2) + com_orient_coefs[3] * pow(t,3);
         COMOrient_[index] = AngleAxisd(temp_com_orient(2), Vector3d::UnitZ()) * AngleAxisd(temp_com_orient(1), Vector3d::UnitY()) * AngleAxisd(temp_com_orient(0), Vector3d::UnitX());
         // Left Ankle Trajectories
         LAnklePos_[index] = lankle_pos_coefs[0] + lankle_pos_coefs[1] * t + lankle_pos_coefs[2] * pow(t,2) + lankle_pos_coefs[3] * pow(t,3);
+        lankle.push_back(LAnklePos_[index]);
         temp_lankle_orient = lankle_orient_coefs[0] + lankle_orient_coefs[1] * t + lankle_orient_coefs[2] * pow(t,2) + lankle_orient_coefs[3] * pow(t,3);
         LAnkleOrient_[index] = AngleAxisd(temp_lankle_orient(2), Vector3d::UnitZ()) * AngleAxisd(temp_lankle_orient(1), Vector3d::UnitY()) * AngleAxisd(temp_lankle_orient(0), Vector3d::UnitX());
         // Right Ankle Trajectories
         RAnklePos_[index] = rankle_pos_coefs[0] + rankle_pos_coefs[1] * t + rankle_pos_coefs[2] * pow(t,2) + rankle_pos_coefs[3] * pow(t,3);
+        rankle.push_back(RAnklePos_[index]);
         temp_rankle_orient = rankle_orient_coefs[0] + rankle_orient_coefs[1] * t + rankle_orient_coefs[2] * pow(t,2) + rankle_orient_coefs[3] * pow(t,3);
         RAnkleOrient_[index] = AngleAxisd(temp_rankle_orient(2), Vector3d::UnitZ()) * AngleAxisd(temp_rankle_orient(1), Vector3d::UnitY()) * AngleAxisd(temp_rankle_orient(0), Vector3d::UnitX());
         if((init_lankle_pos == final_lankle_pos) && (init_rankle_pos == final_rankle_pos))

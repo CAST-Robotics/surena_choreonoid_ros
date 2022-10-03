@@ -35,6 +35,18 @@ class GeneralMotion: private MinJerk{
         int getLength(){
             return length_;
         }
+        
+        vector<Vector3d> get_com(){
+            return com;
+        }
+
+        vector<Vector3d> get_lankle(){
+            return lankle;
+        }
+
+        vector<Vector3d> get_rankle(){
+            return rankle;
+        }
 
         int* getRobotState(){
             return robotState_;
@@ -49,6 +61,10 @@ class GeneralMotion: private MinJerk{
         Matrix3d* COMOrient_;
         Matrix3d* LAnkleOrient_;
         Matrix3d* RAnkleOrient_;
+
+        vector<Vector3d> com;
+        vector<Vector3d> rankle;
+        vector<Vector3d> lankle;
 
         //Robot Movment State Indicator (0:Stance, 1:Double Support, 2:Right Single Support, 3: Left Single Support, 4:None)
         int* robotState_;

@@ -20,6 +20,7 @@
 #include "LieEKF.h"
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
+#include "AnkleTraj.h"
 
 #include "fstream"
 #include <random>
@@ -137,4 +138,8 @@ class Robot{
         vector<int> trajSizes_;
         vector<bool> trajContFlags_;
         double COM_height_;
+
+        vector<Vector3d> com_pos;
+        vector<Vector3d> lankle_pos;
+        vector<Vector3d> rankle_pos;
 };

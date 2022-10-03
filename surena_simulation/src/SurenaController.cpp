@@ -122,8 +122,8 @@ public:
         result = traj.response.result;
         client.call(traj);
 
-        size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
-        // size_ = int((general_traj.request.time) / traj.request.dt);
+        //size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
+        size_ = int((general_traj.request.time + 10) / traj.request.dt);
 
         result = true;
 
@@ -228,7 +228,7 @@ public:
             if(idx == size_ - 1){
                 ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Empty>("/reset_traj");
                 std_srvs::Empty srv;
-                reset_client.call(srv);
+                //reset_client.call(srv);
             }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);

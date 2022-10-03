@@ -10,6 +10,7 @@
 #include "math.h"
 #include "cmath"
 #include "yaml-cpp/yaml.h"
+#include <ros/package.h>
 
 using namespace Eigen;
 using namespace std;
@@ -19,7 +20,7 @@ class MinJerk{
         MinJerk(){}
         MinJerk(bool use_file, double dt=0.005);
         ~MinJerk();
-        void setConfigPath(string config_path);
+        void setConfigPath(string config_path=ros::package::getPath("trajectory_planner") + "/config/config.yaml");
         void parseConfig(YAML::Node config);
         int getTrajSize();
         void cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points, MatrixXd& q);

@@ -9,6 +9,11 @@ public:
 
     void planStance(Vector3d r_foot, Vector3d l_foot, double time);
     void planSteps();
+    inline vector<Vector3d> getRAnkle(){return plannedRAnkle_;}
+    inline vector<Vector3d> getLAnkle(){return plannedLAnkle_;}
+
+    void planInitialDSP();
+    void planFinalDSP();
     
 private:
     vector<Vector3d> plannedRAnkle_;
