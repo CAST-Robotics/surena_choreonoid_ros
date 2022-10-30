@@ -8,7 +8,7 @@ int KeyboardTeleop::getch(){
     static struct termios oldt, newt;
     tcgetattr( STDIN_FILENO, &oldt);           // save old settings
     newt = oldt;
-    newt.c_lflag &= ~(ICANON);                 // disable buffering      
+    newt.c_lflag &= ~(ICANON | ECHO);                 // disable buffering      
     tcsetattr( STDIN_FILENO, TCSANOW, &newt);  // apply new setting
     int ch = getchar();                        // read character (non-blocking
     tcsetattr( STDIN_FILENO, TCSANOW, &oldt);  // restore old settings
@@ -23,7 +23,6 @@ void KeyboardTeleop::run(){
         data = this->getch(); // call your non-blocking input function
         c.data = data;  
         keyboardTeleopPub_.publish(c);
-        std::cout << c.data << std::endl;
         ros::spinOnce();
     }
 }
@@ -33,4 +32,5 @@ int main(int argc, char** argv){
     ros::NodeHandle nh;
     KeyboardTeleop key(&nh);
     key.run();
+    return 0;
 }
