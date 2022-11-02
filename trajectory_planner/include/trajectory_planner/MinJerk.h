@@ -36,6 +36,7 @@ class MinJerk{
         double finalDSPDuration_;
         double stepHeight_;
         vector<Vector3d> footSteps_;
+        vector<double> footYaws_;
         int footStepCount_;
         int trajSize_;
         bool leftFirst_;

@@ -81,6 +81,7 @@ void MinJerk::parseConfig(YAML::Node config){
     for(int i=0; i<footStepCount_; i++){
         Vector3d temp(config["footsteps"][i][0].as<double>(), config["footsteps"][i][1].as<double>(), config["footsteps"][i][2].as<double>());
         footSteps_.push_back(temp);
+        footYaws_.push_back(config["footsteps"][i][3].as<double>());
     }
 
     trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
