@@ -14,58 +14,44 @@ class GeneralMotion: private MinJerk{
                            Vector3d init_rankle_orient, Vector3d final_rankle_orient,
                            double time);
 
-        Vector3d* getCOMPos(){
-            return COMPos_;
+        vector<Vector3d> getCoMPos(){
+            return CoMPos_;
             }
-        Vector3d* getLAnklePos(){
+        vector<Vector3d> getLAnklePos(){
             return LAnklePos_;
             }
-        Vector3d* getRAnklePos(){
+        vector<Vector3d> getRAnklePos(){
             return RAnklePos_;
             }
-        Matrix3d* getLAnkleOrient(){
+        vector<Matrix3d> getLAnkleOrient(){
             return LAnkleOrient_;
             }
-        Matrix3d* getRAnkleOrient(){
+        vector<Matrix3d> getRAnkleOrient(){
             return RAnkleOrient_;
             }
-        Matrix3d* getCOMOrient(){
-            return COMOrient_;
+        vector<Matrix3d> getCoMOrient(){
+            return CoMOrient_;
             }
         int getLength(){
             return length_;
         }
-        
-        vector<Vector3d> get_com(){
-            return com;
-        }
 
-        vector<Vector3d> get_lankle(){
-            return lankle;
-        }
-
-        vector<Vector3d> get_rankle(){
-            return rankle;
-        }
-
-        int* getRobotState(){
+        vector<int> getRobotState(){
             return robotState_;
         }
 
     private:
         int length_;
         double dt_;
-        Vector3d* COMPos_;
-        Vector3d* LAnklePos_;
-        Vector3d* RAnklePos_;
-        Matrix3d* COMOrient_;
-        Matrix3d* LAnkleOrient_;
-        Matrix3d* RAnkleOrient_;
 
-        vector<Vector3d> com;
-        vector<Vector3d> rankle;
-        vector<Vector3d> lankle;
+        vector<Vector3d> CoMPos_;
+        vector<Vector3d> LAnklePos_;
+        vector<Vector3d> RAnklePos_;
+
+        vector<Matrix3d> CoMOrient_;
+        vector<Matrix3d> LAnkleOrient_;
+        vector<Matrix3d> RAnkleOrient_;
 
         //Robot Movment State Indicator (0:Stance, 1:Double Support, 2:Right Single Support, 3: Left Single Support, 4:None)
-        int* robotState_;
+        vector<int> robotState_;
 };

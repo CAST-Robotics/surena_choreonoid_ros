@@ -160,12 +160,12 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     // lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
     // rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
 
-    pelvis << com_pos[iter](0), com_pos[iter](1), com_pos[iter](2);
-    lfoot << lankle_pos[iter](0), lankle_pos[iter](1), lankle_pos[iter](2);
-    rfoot << rankle_pos[iter](0), rankle_pos[iter](1), rankle_pos[iter](2);
-    cout << com_pos[iter](0) << ", " << com_pos[iter](1) << ", " << com_pos[iter](2) << ", ";
-    cout << lankle_pos[iter](0) << ", " << lankle_pos[iter](1) << ", " << lankle_pos[iter](2) << ", ";
-    cout << rankle_pos[iter](0) << ", " << rankle_pos[iter](1) << ", " << rankle_pos[iter](2) << endl;
+    pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
+    lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
+    rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
+    cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
+    cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
+    cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
     // int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
 /*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
@@ -418,8 +418,6 @@ double* Robot::geometricIK(MatrixXd p1, MatrixXd r1, MatrixXd p7, MatrixXd r7, b
     q[1] = atan2(R(2,1), -R(0,1) * sin(q[0]) + R(1,1) * cos(q[0]));           // Hip Roll
     q[2] = atan2(-R(2,0), R(2,2));        // Hip Pitch
     return q;
-    double* choreonoid_only = new double[6] {q[1], q[2], q[0], q[3], q[4], q[5]};
-    return choreonoid_only;
 }
 
 int Robot::findTrajIndex(vector<int> arr, int n, int K)
@@ -613,18 +611,24 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     traj.computeWeight();
     traj.computeTraj();
     vector<Vector3d> com = traj.getCOM();
-    com_pos.insert(com_pos.end(), com.begin(), com.end());
+    CoMPos_.insert(CoMPos_.end(), com.begin(), com.end());
+
     AnkleTraj ank_traj(true, dt_);
     ank_traj.setConfigPath();
     ank_traj.planInitialDSP();
     ank_traj.planSteps();
     ank_traj.planFinalDSP();
-    
     vector<Vector3d> lank = ank_traj.getLAnkle();
-    lankle_pos.insert(lankle_pos.end(), lank.begin(), lank.end());
+    lAnklePos_.insert(lAnklePos_.end(), lank.begin(), lank.end());
     vector<Vector3d> rank = ank_traj.getRAnkle();
-    rankle_pos.insert(rankle_pos.end(), rank.begin(), rank.end());
-    cout << com_pos.size() << endl;
+    rAnklePos_.insert(rAnklePos_.end(), rank.begin(), rank.end());
+
+    int trajectory_size = com.size();
+    dataSize_ += trajectory_size;
+    trajSizes_.push_back(dataSize_);
+    trajContFlags_.push_back(false);
+    isTrajAvailable_ = true;
+
     return true;
 }
 
@@ -648,58 +652,30 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
                                   req.time);
 
     int trajectory_size = motion_planner->getLength();
-    
-    // if (dataSize_ != 0){
-    //     dataSize_ += trajectory_size;
 
-    //     CoMPos_ = appendTrajectory<Vector3d>(CoMPos_, motion_planner->getCOMPos(), dataSize_ - trajectory_size, trajectory_size);
-    //     lAnklePos_ = appendTrajectory<Vector3d>(lAnklePos_, motion_planner->getLAnklePos(), dataSize_ - trajectory_size, trajectory_size);
-    //     rAnklePos_ = appendTrajectory<Vector3d>(rAnklePos_, motion_planner->getRAnklePos(), dataSize_ - trajectory_size, trajectory_size);
-    //     robotState_ = appendTrajectory<int>(robotState_, motion_planner->getRobotState(), dataSize_ - trajectory_size, trajectory_size);
+    vector<Vector3d> com_pos = motion_planner->getCoMPos();
+    CoMPos_.insert(CoMPos_.end(), com_pos.begin(), com_pos.end());
+    vector<Matrix3d> com_rot = motion_planner->getCoMOrient();
+    CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
 
-    //     CoMRot_ = appendTrajectory<Matrix3d>(CoMRot_, motion_planner->getCOMOrient(), dataSize_ - trajectory_size, trajectory_size);
-    //     lAnkleRot_ = appendTrajectory<Matrix3d>(lAnkleRot_, motion_planner->getLAnkleOrient(), dataSize_ - trajectory_size, trajectory_size);
-    //     rAnkleRot_ = appendTrajectory<Matrix3d>(rAnkleRot_, motion_planner->getRAnkleOrient(), dataSize_ - trajectory_size, trajectory_size);
+    vector<Vector3d> lank = motion_planner->getLAnklePos();
+    lAnklePos_.insert(lAnklePos_.end(), lank.begin(), lank.end());
+    vector<Matrix3d> lank_rot = motion_planner->getLAnkleOrient();
+    lAnkleRot_.insert(lAnkleRot_.end(), lank_rot.begin(), lank_rot.end());
 
-    //     delete[] FKCoM_;
-    //     delete[] FKCoMDot_;
-    //     delete[] realXi_;
-    //     delete[] realZMP_;
-    //     delete[] rSoles_;
-    //     delete[] lSoles_;
-        
-    // }else{
-    //     dataSize_ += trajectory_size;
+    vector<Vector3d> rank = motion_planner->getRAnklePos();
+    rAnklePos_.insert(rAnklePos_.end(), rank.begin(), rank.end());
+    vector<Matrix3d> rank_rot = motion_planner->getRAnkleOrient();
+    rAnkleRot_.insert(rAnkleRot_.end(), rank_rot.begin(), rank_rot.end());
 
-    //     CoMPos_ = motion_planner->getCOMPos();
-    //     lAnklePos_ = motion_planner->getLAnklePos();
-    //     rAnklePos_ = motion_planner->getRAnklePos();
-    //     robotState_ = motion_planner->getRobotState();
+    vector<int> robot_state = motion_planner->getRobotState();
+    robotState_.insert(robotState_.end(), robot_state.begin(), robot_state.end());  
 
-    //     CoMRot_ = motion_planner->getCOMOrient();
-    //     lAnkleRot_ = motion_planner->getLAnkleOrient();
-    //     rAnkleRot_ = motion_planner->getRAnkleOrient();
-    // }
-
-    // res.duration = dataSize_;
-    // trajSizes_.push_back(dataSize_);
-    // trajContFlags_.push_back(false);
-    // isTrajAvailable_ = true;
-    // FKCoM_ = new Vector3d[dataSize_];
-    // FKCoMDot_ = new Vector3d[dataSize_];
-    // realXi_ = new Vector3d[dataSize_];
-    // realZMP_ = new Vector3d[dataSize_];
-    // rSoles_ = new Vector3d[dataSize_];
-    // lSoles_ = new Vector3d[dataSize_];
-
-    vector<Vector3d> com = motion_planner->get_com();
-    com_pos.insert(com_pos.end(), com.begin(), com.end());
-
-    vector<Vector3d> lank = motion_planner->get_lankle();
-    lankle_pos.insert(lankle_pos.end(), lank.begin(), lank.end());
-
-    vector<Vector3d> rank = motion_planner->get_rankle();
-    rankle_pos.insert(rankle_pos.end(), rank.begin(), rank.end());
+    dataSize_ += trajectory_size;
+    res.duration = dataSize_;
+    trajSizes_.push_back(dataSize_);
+    trajContFlags_.push_back(false);
+    isTrajAvailable_ = true;
 
     return true;
 }
@@ -726,12 +702,9 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
             config[i] = req.config[i-1];
             jnt_vel[i] = req.jnt_vel[i-1];  
         }
-        //cout << req.right_ft[0] << "," << req.right_ft[1] << "," << req.right_ft[2] << ","
-        //<< req.left_ft[0] << "," << req.left_ft[1] << "," << req.left_ft[2] << "," << endl;
         this->spinOnline(req.iter, config, jnt_vel, right_torque, left_torque, req.right_ft[0], req.left_ft[0],
                          Vector3d(req.gyro[0], req.gyro[1], req.gyro[2]),
                          Vector3d(req.accelerometer[0],req.accelerometer[1],req.accelerometer[2]), jnt_angs);
-        //this->spinOffline(req.iter, jnt_angs);
         for(int i = 0; i < 12; i++)
             res.jnt_angs[i] = jnt_angs[i];
         //ROS_INFO("joint angles requested");
@@ -755,14 +728,6 @@ bool Robot::jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
 bool Robot::resetTrajCallback(std_srvs::Empty::Request  &req,
                               std_srvs::Empty::Response &res)
 {
-    delete[] CoMPos_;
-    delete[] robotState_;
-    delete[] lAnklePos_;
-    delete[] rAnklePos_;
-    delete[] CoMRot_;
-    delete[] lAnkleRot_;
-    delete[] rAnkleRot_;
-
     delete[] FKCoM_;
     delete[] FKCoMDot_;
     delete[] realXi_;
@@ -834,8 +799,6 @@ int main(int argc, char* argv[])
     ki = MatrixXd::Zero(3, 3);
     kcom = MatrixXd::Zero(3, 3);
     kzmp = MatrixXd::Zero(3, 3);
-    //kcom << 4,0,0,0,4,0,0,0,0;
-    //kzmp << 0.5,0,0,0,0.5,0,0,0,0;
     Controller default_ctrl(kp, ki, kzmp, kcom);
     Robot surena(&nh, default_ctrl);
     ros::spin();

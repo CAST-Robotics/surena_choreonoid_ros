@@ -88,17 +88,17 @@ class Robot{
         Matrix3d Rroll(double phi);
         Matrix3d RPitch(double theta);
 
-        Vector3d* CoMPos_;
-        Matrix3d* CoMRot_;
+        vector<Vector3d> CoMPos_;
+        vector<Matrix3d> CoMRot_;
         Vector3d* zmpd_;
         Vector3d* CoMDot_;
         Vector3d* xiDesired_;
         Vector3d* xiDot_;
-        Vector3d* rAnklePos_;
-        Vector3d* lAnklePos_;
-        Matrix3d* rAnkleRot_;
-        Matrix3d* lAnkleRot_;
-        int* robotState_;
+        vector<Vector3d> rAnklePos_;
+        vector<Vector3d> lAnklePos_;
+        vector<Matrix3d> rAnkleRot_;
+        vector<Matrix3d> lAnkleRot_;
+        vector<int> robotState_;
 
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole
@@ -138,8 +138,4 @@ class Robot{
         vector<int> trajSizes_;
         vector<bool> trajContFlags_;
         double COM_height_;
-
-        vector<Vector3d> com_pos;
-        vector<Vector3d> lankle_pos;
-        vector<Vector3d> rankle_pos;
 };
