@@ -25,6 +25,12 @@ class MinJerk{
         int getTrajSize();
         void cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points, MatrixXd& q);
         Vector4d genCubicCoeffs(const double pos_pts[], const double vel_pts[], double final_time);
+        inline vector<double> getFootYaws(){return footYaws_;}
+        inline double getFootStepCount(){return footStepCount_;}
+        inline double getInitDSPDuration(){return initDSPDuration_;}
+        inline double getFinalDSPDuration(){return finalDSPDuration_;}
+        inline double getSSPDuration(){return SSPDuration_;}
+        inline double getDSPDuration(){return DSPDuration_;}
 
     protected:
         double dt_;

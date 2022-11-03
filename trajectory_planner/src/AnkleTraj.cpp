@@ -59,7 +59,7 @@ void AnkleTraj::planSteps(){
         VectorXd yaw_time_points(2);
         yaw_time_points << 0.0, SSPDuration_;
         MatrixXd yaw_traj;
-        this->cubicPolyTraj(yaw_way_points, yaw_time_points, dt_, vel_points, yaw_traj);
+        this->cubicPolyTraj(yaw_way_points, yaw_time_points, dt_, yaw_vel_points, yaw_traj);
 
         // first ankle swing
         if(i%2==0){

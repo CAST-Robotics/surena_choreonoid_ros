@@ -25,7 +25,9 @@ class PreviewTraj {
         void setDt(double dt);
         void computeWeight();
         void computeTraj();
-        vector<Vector3d> getCOM();
+        void planYawTraj();
+        inline vector<Vector3d> getCoMPos(){return CoMPos_;}
+        inline vector<Matrix3d> getCoMRot(){return CoMRot_;}
 
     private:
         double dt_;
@@ -45,7 +47,8 @@ class PreviewTraj {
         MatrixXd Gl_;
         MatrixXd Gx_;
         VectorXd Gd_;
-        vector<Vector3d> com_pos;
+        vector<Vector3d> CoMPos_;
+        vector<Matrix3d> CoMRot_;
 
         Vector3d error_;
         ZMPPlanner* ZMPPlanner_;

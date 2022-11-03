@@ -196,7 +196,7 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     //        lAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << lAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << "," <<
     //        rAnkleRot_[iter].eulerAngles(0, 1, 2)(0) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(1) << "," << rAnkleRot_[iter].eulerAngles(0, 1, 2)(2) << endl;
     //doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
-    doIK(pelvis, Matrix3d::Identity(), lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
+    doIK(pelvis, CoMRot_[iter], lfoot, lAnkleRot_[iter], rfoot, rAnkleRot_[iter]);
 
     for(int i = 0; i < 12; i++)
         joint_angles[i] = joints_[i];     // right leg(0-5) & left leg(6-11)
@@ -610,14 +610,18 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     PreviewTraj traj(0.68, 1.8 / dt_, dt_);
     traj.computeWeight();
     traj.computeTraj();
-    vector<Vector3d> com = traj.getCOM();
+    vector<Vector3d> com = traj.getCoMPos();
     CoMPos_.insert(CoMPos_.end(), com.begin(), com.end());
+    traj.planYawTraj();
+    vector<Matrix3d> com_rot = traj.getCoMRot();
+    CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
 
     AnkleTraj ank_traj(true, dt_);
     ank_traj.setConfigPath();
     ank_traj.planInitialDSP();
     ank_traj.planSteps();
     ank_traj.planFinalDSP();
+
     vector<Vector3d> lank = ank_traj.getLAnklePos();
     lAnklePos_.insert(lAnklePos_.end(), lank.begin(), lank.end());
     vector<Matrix3d> lank_rot = ank_traj.getLAnkleRot();
