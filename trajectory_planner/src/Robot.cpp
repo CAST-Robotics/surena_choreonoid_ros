@@ -102,6 +102,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     onlineWalk_ = robot_ctrl;
     quatEKF_ = new QuatEKF();
     lieEKF_ = new LieEKF();
+    stepPlanner_ = new FootStepPlanner(torso_);
 
     //cout << "Robot Object has been Created" << endl;
 }

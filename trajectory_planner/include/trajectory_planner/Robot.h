@@ -21,6 +21,7 @@
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
 #include "AnkleTraj.h"
+#include "FootStepPlanner.h"
 
 #include "fstream"
 #include <random>
@@ -65,6 +66,7 @@ class Robot{
         Controller onlineWalk_;
         QuatEKF* quatEKF_;
         LieEKF* lieEKF_;
+        FootStepPlanner* stepPlanner_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){
