@@ -4,8 +4,8 @@
 
 class ZMPPlanner : public MinJerk {
 public:
-    ZMPPlanner(bool useFile, double dt=0.005);
-    ~ZMPPlanner();
+    ZMPPlanner();
+    virtual ~ZMPPlanner();
     void planInitialDSPZMP();
     void planStepsZMP();
     void planFinalDSPZMP();

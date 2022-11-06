@@ -1,10 +1,6 @@
 #include "ZMPPlanner.h"
 
-ZMPPlanner::ZMPPlanner(bool use_file, double dt) : MinJerk(use_file, dt){
-    if(!useFile_)
-        cout << "Set Walking Parameters ..." << endl;
-    else
-        cout << "Set Config File Path ..." << endl;
+ZMPPlanner::ZMPPlanner(){
 }
 
 ZMPPlanner::~ZMPPlanner(){

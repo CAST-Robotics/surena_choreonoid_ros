@@ -1,11 +1,7 @@
 #include "AnkleTraj.h"
 
 
-AnkleTraj::AnkleTraj(bool use_file, double dt) : MinJerk(use_file, dt){
-    if(!useFile_)
-        cout << "Set Walking Parameters ..." << endl;
-    else
-        cout << "Set Config File Path ..." << endl;
+AnkleTraj::AnkleTraj(){
 }
 
 void AnkleTraj::planStance(Vector3d r_foot, Vector3d l_foot, double yaw, double time){
@@ -40,8 +36,8 @@ void AnkleTraj::planSteps(){
     vector<Matrix3d> first_ankle_rot;
     vector<Vector3d> second_ankle_pos;
     vector<Matrix3d> second_ankle_rot;
-
-    for(int i=0; i<footStepCount_ - 2; i++){
+    cout << footSteps_.size() << endl;
+    for(int i=0; i<footSteps_.size()-2; i++){
         MatrixXd way_points{
             {footSteps_[i](0), footSteps_[i](0), (footSteps_[i+2](0) + footSteps_[i](0)) / 2, footSteps_[i+2](0), footSteps_[i+2](0)},
             {footSteps_[i](1), footSteps_[i](1), (footSteps_[i+2](1) + footSteps_[i](1)) / 2, footSteps_[i+2](1), footSteps_[i+2](1)},
@@ -60,7 +56,6 @@ void AnkleTraj::planSteps(){
         yaw_time_points << 0.0, SSPDuration_;
         MatrixXd yaw_traj;
         this->cubicPolyTraj(yaw_way_points, yaw_time_points, dt_, yaw_vel_points, yaw_traj);
-
         // first ankle swing
         if(i%2==0){
             // single support phase
@@ -98,15 +93,19 @@ void AnkleTraj::planSteps(){
     }
 
     if(leftFirst_){
-        plannedLAnklePos_.insert(plannedLAnklePos_.end(), first_ankle_pos.begin(), first_ankle_pos.end());
-        plannedLAnkleRot_.insert(plannedLAnkleRot_.end(), first_ankle_rot.begin(), first_ankle_rot.end());
-        plannedRAnklePos_.insert(plannedRAnklePos_.end(), second_ankle_pos.begin(), second_ankle_pos.end());
-        plannedRAnkleRot_.insert(plannedRAnkleRot_.end(), second_ankle_rot.begin(), second_ankle_rot.end());
+        for(int i=0; i< first_ankle_pos.size(); i++){
+            plannedLAnklePos_.push_back(first_ankle_pos[i]);
+            plannedLAnkleRot_.push_back(first_ankle_rot[i]);
+            plannedRAnklePos_.push_back(second_ankle_pos[i]);
+            plannedRAnkleRot_.push_back(second_ankle_rot[i]);
+        }
     }else{
-        plannedLAnklePos_.insert(plannedRAnklePos_.end(), second_ankle_pos.begin(), second_ankle_pos.end());
-        plannedLAnkleRot_.insert(plannedLAnkleRot_.end(), second_ankle_rot.begin(), second_ankle_rot.end());
-        plannedRAnklePos_.insert(plannedLAnklePos_.end(), first_ankle_pos.begin(), first_ankle_pos.end());
-        plannedRAnkleRot_.insert(plannedRAnkleRot_.end(), first_ankle_rot.begin(), first_ankle_rot.end());
+        for(int i=0; i< first_ankle_pos.size(); i++){
+            plannedLAnklePos_.push_back(second_ankle_pos[i]);
+            plannedLAnkleRot_.push_back(second_ankle_rot[i]);
+            plannedRAnklePos_.push_back(first_ankle_pos[i]);
+            plannedRAnkleRot_.push_back(first_ankle_rot[i]);
+        }
     }
 
     // for(int i=0; i<plannedLAnklePos_.size(); i++){

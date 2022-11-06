@@ -12,6 +12,9 @@ class FootStepPlanner : public MinJerk {
         void planStraight();
         void planTurn();
 
+        inline vector<Vector3d> getFootPrints() {return footPrints_;}
+        inline vector<double> getFootYaws(){return footYaws_;}
+
     private:
         double stepWidth_;
         double stepLength_;
@@ -22,5 +25,6 @@ class FootStepPlanner : public MinJerk {
         bool isTurn_;
 
         vector<Vector3d> footPrints_;
+        vector<double> footYaws_;
 
 };

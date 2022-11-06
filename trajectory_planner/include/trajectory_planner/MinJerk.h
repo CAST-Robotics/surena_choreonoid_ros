@@ -17,11 +17,13 @@ using namespace std;
 
 class MinJerk{
     public:
-        MinJerk(){}
-        MinJerk(bool use_file, double dt=0.005);
-        ~MinJerk();
+        MinJerk();
+        virtual ~MinJerk();
         void setConfigPath(string config_path=ros::package::getPath("trajectory_planner") + "/config/config.yaml");
         void parseConfig(YAML::Node config);
+        inline void setDt(double dt){dt_ = dt;}
+        void setParams(double init_dsp, double dsp, double ssp, double final_dsp, double step_heigh);
+        void setFootStepsData(vector<Vector3d> foot_steps, vector<double> foot_yaws);
         int getTrajSize();
         void cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_points, double dt, const MatrixXd& vel_points, MatrixXd& q);
         Vector4d genCubicCoeffs(const double pos_pts[], const double vel_pts[], double final_time);
@@ -33,19 +35,18 @@ class MinJerk{
         inline double getDSPDuration(){return DSPDuration_;}
 
     protected:
-        double dt_;
-        bool useFile_;
+        static double dt_;
         YAML::Node config_;
-        double initDSPDuration_;
-        double DSPDuration_;
-        double SSPDuration_;
-        double finalDSPDuration_;
-        double stepHeight_;
-        vector<Vector3d> footSteps_;
-        vector<double> footYaws_;
-        int footStepCount_;
-        int trajSize_;
-        bool leftFirst_;
+        static double initDSPDuration_;
+        static double DSPDuration_;
+        static double SSPDuration_;
+        static double finalDSPDuration_;
+        static double stepHeight_;
+        static vector<Vector3d> footSteps_;
+        static vector<double> footYaws_;
+        static int footStepCount_;
+        static int trajSize_;
+        static bool leftFirst_;
 
         template <typename T>
         T* cubicInterpolate(T theta_ini, T theta_f, T theta_dot_ini, T theta_dot_f, double tf){

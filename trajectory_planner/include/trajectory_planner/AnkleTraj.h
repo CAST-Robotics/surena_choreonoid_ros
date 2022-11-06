@@ -4,8 +4,8 @@
 
 class AnkleTraj : public MinJerk {
 public:
-    AnkleTraj(bool useFile, double dt=0.005);
-    ~AnkleTraj(){}
+    AnkleTraj();
+    virtual ~AnkleTraj(){}
 
     void planStance(Vector3d r_foot, Vector3d l_foot, double yaw, double time);
     void planSteps();

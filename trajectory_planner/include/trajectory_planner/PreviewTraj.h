@@ -10,8 +10,6 @@
 #include <vector>
 #include <cmath>
 
-#include <ros/package.h>
-
 #include "riccati_solver.h"
 #include "ZMPPlanner.h"
 
@@ -20,7 +18,8 @@ using namespace Eigen;
 
 class PreviewTraj {
     public:
-        PreviewTraj(double robot_height, int n=320, double dt=0.005);
+        PreviewTraj(ZMPPlanner* zmp_planner, double robot_height, int n=320, double dt=0.005);
+        ~PreviewTraj();
 
         void setDt(double dt);
         void computeWeight();

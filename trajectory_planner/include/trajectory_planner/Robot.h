@@ -2,6 +2,7 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <ros/package.h>
 #include <std_srvs/Empty.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
@@ -67,6 +68,7 @@ class Robot{
         QuatEKF* quatEKF_;
         LieEKF* lieEKF_;
         FootStepPlanner* stepPlanner_;
+        ZMPPlanner* ZMPPlanner_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){

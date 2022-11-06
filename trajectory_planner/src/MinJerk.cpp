@@ -1,6 +1,18 @@
 #include "MinJerk.h"
 
-MinJerk::MinJerk(bool use_file, double dt) : useFile_(use_file), dt_(dt){}
+double MinJerk::initDSPDuration_;
+double MinJerk::DSPDuration_;
+double MinJerk::SSPDuration_;
+double MinJerk::finalDSPDuration_;
+double MinJerk::stepHeight_;
+vector<Vector3d> MinJerk::footSteps_;
+vector<double> MinJerk::footYaws_;
+double MinJerk::dt_;
+bool MinJerk::leftFirst_;
+int MinJerk::footStepCount_;
+int MinJerk::trajSize_;
+
+MinJerk::MinJerk(){}
 
 MinJerk::~MinJerk(){}
 
@@ -86,6 +98,27 @@ void MinJerk::parseConfig(YAML::Node config){
 
     trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
     
+    if(footSteps_[0](1) > 0)
+        leftFirst_ = true;
+    else
+        leftFirst_ = false;
+}
+
+void MinJerk::setParams(double init_dsp, double dsp, double ssp, double final_dsp, double step_height){
+    initDSPDuration_ = init_dsp;
+    DSPDuration_ = dsp;
+    SSPDuration_ = ssp;
+    finalDSPDuration_ = final_dsp;
+    stepHeight_ = step_height;
+
+    trajSize_ = int((initDSPDuration_ + (footStepCount_ - 2) * (DSPDuration_ + SSPDuration_) + finalDSPDuration_) / dt_);
+}
+
+void MinJerk::setFootStepsData(vector<Vector3d> foot_steps, vector<double> foot_yaws){
+    footSteps_ = foot_steps;
+    footYaws_ = foot_yaws;
+    footStepCount_ = footSteps_.size();
+
     if(footSteps_[0](1) > 0)
         leftFirst_ = true;
     else
