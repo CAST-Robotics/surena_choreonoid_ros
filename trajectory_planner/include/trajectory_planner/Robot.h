@@ -2,11 +2,13 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <ros/package.h>
 #include <std_srvs/Empty.h>
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/GeneralTraj.h"
 #include "nav_msgs/Odometry.h"
+#include <tf/transform_broadcaster.h> 
 
 #include "DCM.h"
 #include "Link.h"
@@ -19,6 +21,8 @@
 #include "LieEKF.h"
 #include "PreviewTraj.h"
 #include "ZMPPlanner.h"
+#include "AnkleTraj.h"
+#include "FootStepPlanner.h"
 
 #include "fstream"
 #include <random>
@@ -63,6 +67,8 @@ class Robot{
         Controller onlineWalk_;
         QuatEKF* quatEKF_;
         LieEKF* lieEKF_;
+        FootStepPlanner* stepPlanner_;
+        ZMPPlanner* ZMPPlanner_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){
@@ -86,17 +92,17 @@ class Robot{
         Matrix3d Rroll(double phi);
         Matrix3d RPitch(double theta);
 
-        Vector3d* CoMPos_;
-        Matrix3d* CoMRot_;
+        vector<Vector3d> CoMPos_;
+        vector<Matrix3d> CoMRot_;
         Vector3d* zmpd_;
         Vector3d* CoMDot_;
         Vector3d* xiDesired_;
         Vector3d* xiDot_;
-        Vector3d* rAnklePos_;
-        Vector3d* lAnklePos_;
-        Matrix3d* rAnkleRot_;
-        Matrix3d* lAnkleRot_;
-        int* robotState_;
+        vector<Vector3d> rAnklePos_;
+        vector<Vector3d> lAnklePos_;
+        vector<Matrix3d> rAnkleRot_;
+        vector<Matrix3d> lAnkleRot_;
+        vector<int> robotState_;
 
         Vector3d rSole_;    // current position of right sole
         Vector3d lSole_;    // current position of left sole
@@ -125,6 +131,7 @@ class Robot{
         ros::ServiceServer resetTrajServer_;
 
         ros::Publisher baseOdomPub_;
+        tf::TransformBroadcaster baseOdomBroadcaster_;
 
         bool isTrajAvailable_;
         bool useController_;

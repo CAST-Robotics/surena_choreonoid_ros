@@ -104,29 +104,31 @@ public:
         general_traj.request.time = 2;
         general_traj.request.dt = dt;
 
+        gen_client.call(general_traj);
         //DCM Walk
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-
+    
         traj.request.step_width = 0.0;
         traj.request.alpha = 0.44;
+        traj.request.use_file = false;
+        traj.request.t_init_double_support = 1;
         traj.request.t_double_support = 0.1;
         traj.request.t_step = 1.0;
         traj.request.step_length = -0.17;
         traj.request.COM_height = 0.68;
-        traj.request.step_count = 4;
+        traj.request.step_count = 12;
         traj.request.ankle_height = 0.025;
-        traj.request.theta = 0.15;
+        traj.request.theta = 0.1;
         traj.request.dt = dt;
         result = traj.response.result;
-        
-        size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
-        // size_ = int((general_traj.request.time) / traj.request.dt);
+        client.call(traj);
+
+        //size_ = int(((traj.request.step_count + 2) * traj.request.t_step + general_traj.request.time) / traj.request.dt);
+        size_ = int((general_traj.request.time + 10) / traj.request.dt);
 
         result = true;
 
-        gen_client.call(general_traj);
-        client.call(traj);
         
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
@@ -198,7 +200,7 @@ public:
             Vector3d left_ankle_pos = l_ankle.block<3,1>(0, 3);
             Vector3d right_ankle_pos = r_ankle.block<3,1>(0, 3);
             // cout << base_pos(0) << "," << base_pos(1) << "," << base_pos(2) << ",";
-            // cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << ",";
+            // cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << endl;
             // cout << left_ankle_pos(0) << "," << left_ankle_pos(1) << "," << left_ankle_pos(2) << ",";
             // cout << right_ankle_pos(0) << "," << right_ankle_pos(1) << "," << right_ankle_pos(2) << endl;
             for(int i = 0; i < 16; i ++){
@@ -228,7 +230,7 @@ public:
             if(idx == size_ - 1){
                 ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Empty>("/reset_traj");
                 std_srvs::Empty srv;
-                reset_client.call(srv);
+                //reset_client.call(srv);
             }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);

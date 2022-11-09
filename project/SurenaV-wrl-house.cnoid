@@ -19,21 +19,22 @@ items:
           name: "house (copy)"
           plugin: Body
           class: BodyItem
+          is_selected: true
           is_checked: true
           data: 
             file: "../../choreonoid/share/model/house/house (copy).wrl"
             format: CHOREONOID-BODY
-            rootPosition: [ 2.82238977, -2.69190069, -1.64831378e-16 ]
+            rootPosition: [ 5.72281166, 1.63730762, 0.284200948 ]
             rootAttitude: [ 
-              -1, -7.49879891e-33, 1.2246468e-16, 
-              1.2246468e-16, -6.123234e-17, 1, 
-              0, 1, 6.123234e-17 ]
+              -0.364590111, -1.57824351e-26, -0.931168111, 
+              -0.931168111, -6.123234e-17, 0.364590111, 
+              -5.70176024e-17, 1, 2.23247056e-17 ]
             jointPositions: [  ]
-            initialRootPosition: [ 2.82238977, -2.69190069, -1.64831378e-16 ]
+            initialRootPosition: [ 5.72281166, 1.63730762, 0.284200948 ]
             initialRootAttitude: [ 
-              -1, -1.23259516e-32, 1.2246468e-16, 
-              1.2246468e-16, -2.22044605e-16, 1, 
-              1.23259516e-32, 1, 2.22044605e-16 ]
+              -0.364590111, -1.66533454e-16, -0.931168111, 
+              -0.931168111, 6.48503473e-12, 0.364590111, 
+              0, 1, 6.48481269e-12 ]
             staticModel: true
             collisionDetection: true
             selfCollisionDetection: false
@@ -95,7 +96,6 @@ items:
           name: "SURENA5"
           plugin: Body
           class: BodyItem
-          is_selected: true
           is_checked: true
           data: 
             file: "../model/SurenaV/surena5.wrl"
@@ -175,6 +175,32 @@ items:
                   - 
                     class: CameraImageVisualizerItem
                     name: camera_Image
+        - 
+          id: 9
+          name: "Floor"
+          plugin: Body
+          class: BodyItem
+          is_checked: true
+          data: 
+            file: "../../choreonoid/share/model/misc/floor.body"
+            format: CHOREONOID-BODY
+            rootPosition: [ 0, 0, -0.1 ]
+            rootAttitude: [ 
+              0.999999873, -0.000504576255, 0, 
+              0.000504576255, 0.999999873, -0, 
+              0, 0, 1 ]
+            jointPositions: [  ]
+            initialRootPosition: [ 0, 0, -0.1 ]
+            initialRootAttitude: [ 
+              1, 0, 0, 
+              0, 1, 0, 
+              0, 0, 1 ]
+            staticModel: true
+            collisionDetection: true
+            selfCollisionDetection: false
+            location_editable: true
+            scene_sensitive: true
+            zmp: [ 0, 0, 0 ]
 views: 
   - 
     id: 0
@@ -211,7 +237,7 @@ views:
     class: SceneView
     mounted: true
     state: 
-      editMode: true
+      editMode: false
       viewpointOperationMode: thirdPerson
       visible_polygon_elements: [ face ]
       highlighting: false
@@ -252,9 +278,9 @@ views:
           fieldOfView: 0.610865
           near: 0.04
           far: 200
-          eye: [ 5.99295, -0.210363, 4.64507 ]
-          direction: [ -0.601692, 0.088693, -0.793789 ]
-          up: [ -0.785303, 0.115758, 0.608194 ]
+          eye: [ 11.3897, -3.65566, 18.6585 ]
+          direction: [ -0.491472, -0.00179272, -0.870892 ]
+          up: [ -0.870886, -0.00317669, 0.491475 ]
         - 
           camera: [ System, Orthographic ]
           orthoHeight: 20
@@ -294,10 +320,16 @@ views:
     state: 
       element_type: all
       listingMode: list
-      current_body_item: 5
+      current_body_item: 2
       body_items: 
         - 
           id: 2
+          selected_links: [ 0 ]
+        - 
+          id: 5
+          selected_links: [ 0 ]
+        - 
+          id: 9
           selected_links: [ 0 ]
   - 
     id: 8
@@ -306,7 +338,7 @@ views:
     class: LinkPositionView
     mounted: true
     state: 
-      coordinate_mode: base
+      coordinate_mode: world
       preferred_coordinate_mode: base
       show_rpy: true
       unique_rpy: false
@@ -384,8 +416,8 @@ Body:
   "BodyMotionEngine": 
     updateJointVelocities: false
   "BodySelectionManager": 
-    current_body_item: 5
-    current_link: "Pelvis"
+    current_body_item: 2
+    current_link: "Root"
   "EditableSceneBody": 
     editableSceneBodies: 
       - 
@@ -395,6 +427,11 @@ Body:
         show_zmp: false
       - 
         bodyItem: 5
+        show_cm: false
+        show_cm_projection: false
+        show_zmp: false
+      - 
+        bodyItem: 9
         show_cm: false
         show_cm_projection: false
         show_zmp: false

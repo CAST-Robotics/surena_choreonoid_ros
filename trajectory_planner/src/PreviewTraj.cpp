@@ -1,16 +1,17 @@
 #include "PreviewTraj.h"
 
-PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_height), N_(n) {
+PreviewTraj::PreviewTraj(ZMPPlanner* zmp_planner, double robot_height, int n, double dt) : ZMPPlanner_(zmp_planner), robotHeight_(robot_height), N_(n), dt_(dt) {
     
-    dt_ = 0.005;
     g_ = 9.81;
 
     A_ << 1, dt_, pow(dt_, 2) / 2,
          0, 1, dt_,
          0, 0, 1;
+
     b_ << pow(dt_, 3) / 6,
          pow(dt_, 2) / 2,
          dt_;
+
     c_ << 1, 0, -(robotHeight_ / g_);
     
     Q_ = 1 * MatrixXd::Identity(1, 1);
@@ -21,17 +22,15 @@ PreviewTraj::PreviewTraj(double robot_height, int n=320) : robotHeight_(robot_he
     Gd_ = VectorXd::Zero(N_);
 
     error_ = Vector3d(0, 0, 0);
-
-    string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
-    ZMPPlanner_ = new ZMPPlanner(dt_, config_path);
-    ZMPPlanner_->planInitialDSPZMP();
-    ZMPPlanner_->planStepsZMP();
-    ZMPPlanner_->planFinalDSPZMP();
     int traj_size = ZMPPlanner_->getTrajSize();
     x_ = new Vector3d[traj_size];
     y_ = new Vector3d[traj_size];
     x_[0] = x0_;
     y_[0] = x0_;
+    CoMPos_.push_back(Vector3d(0, 0, robotHeight_));
+}
+
+PreviewTraj::~PreviewTraj(){
 }
 
 void PreviewTraj::setDt(double dt){
@@ -91,9 +90,43 @@ void PreviewTraj::computeTraj(){
         x_[i] = A_ * x_[i - 1] + ux * b_;
         y_[i] = A_ * y_[i - 1] + uy * b_;
 
-        double p = c_ * x_[i - 1];
-        cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", ";
-        p = c_ * y_[i - 1];
-        cout << y_[i](0) << ", " << y_[i](1) << ", " << y_[i](2) << ", " << p << endl;
+        // double p = c_ * x_[i - 1];
+        // cout << x_[i](0) << ", " << x_[i](1) << ", " << x_[i](2) << ", " << p << ", ";
+        // p = c_ * y_[i - 1];
+        // cout << y_[i](0) << ", " << y_[i](1) << ", " << y_[i](2) << ", " << p << endl;
+
+        CoMPos_.push_back(Vector3d(x_[i](0), y_[i](0), robotHeight_));
+    }
+}
+
+void PreviewTraj::planYawTraj(){
+    vector<double> yaws = ZMPPlanner_->getFootYaws();
+    int size = yaws.size();
+    double step_time = ZMPPlanner_->getSSPDuration() + ZMPPlanner_->getDSPDuration();
+    double init_yaw, final_yaw;
+
+    for(int i=0; i<int(ZMPPlanner_->getInitDSPDuration() / dt_); i++){
+        init_yaw = (yaws[0] + yaws[1]) / 2;
+        CoMRot_.push_back(Matrix3d(AngleAxisd(init_yaw, Vector3d::UnitZ())));
+    }
+
+    for(int i=1; i<size-1; i++){
+        final_yaw = (yaws[i] + yaws[i+1]) / 2;
+        MatrixXd yaw_way_points{{init_yaw, final_yaw}};
+        MatrixXd yaw_vel_points = MatrixXd::Zero(1, 2);
+        VectorXd yaw_time_points(2);
+        yaw_time_points << 0.0, step_time;
+        MatrixXd yaw_traj;
+        ZMPPlanner_->cubicPolyTraj(yaw_way_points, yaw_time_points, dt_, yaw_vel_points, yaw_traj);
+        
+        for(int j=0; j<int(step_time / dt_); j++){
+            CoMRot_.push_back(Matrix3d(AngleAxisd(yaw_traj(0, j), Vector3d::UnitZ())));
+        }
+        init_yaw = final_yaw;
+    }
+
+    for(int i=0; i<int(ZMPPlanner_->getFinalDSPDuration() / dt_); i++){
+        final_yaw = (yaws[size-1] + yaws[size-2]) / 2;
+        CoMRot_.push_back(Matrix3d(AngleAxisd(final_yaw, Vector3d::UnitZ())));
     }
 }

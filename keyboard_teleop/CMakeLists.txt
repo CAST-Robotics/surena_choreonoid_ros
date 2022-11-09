@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(trajectory_planner)
+project(keyboard_teleop)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -9,32 +9,9 @@ project(trajectory_planner)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  roslib
   rospy
   std_msgs
-  geometry_msgs
-  std_srvs
-  nav_msgs
-  tf
-  message_generation
-  choreonoid
 )
-
-# yaml-cpp include config from https://github.com/zephir-lang/zephirc/commit/4e3d1c9b35e15b368cf2be46b83eb69be6d65b53
-find_package(PkgConfig REQUIRED)
-# Resolve system dependency on yaml-cpp, which apparently does not
-# provide a CMake find_package() module.
-pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
-
-find_path(YAML_CPP_INCLUDE_DIR
-    NAMES yaml_cpp.h
-    PATHS ${YAML_CPP_INCLUDE_DIRS})
-
-find_library(YAML_CPP_LIBRARY
-    NAMES YAML_CPP
-    PATHS ${YAML_CPP_LIBRARY_DIRS})
-
-link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -77,12 +54,11 @@ link_directories(${YAML_CPP_LIBRARY_DIRS})
 # )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  JntAngs.srv
-  Trajectory.srv
-  GeneralTraj.srv
-)
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -92,13 +68,10 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  nav_msgs
-  geometry_msgs
-  std_srvs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -130,8 +103,8 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES trajectory_planner
+   INCLUDE_DIRS include
+#  LIBRARIES keyboard_teleop
 #  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
@@ -143,13 +116,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include/trajectory_planner
+  include/keyboard_teleop
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/trajectory_planner.cpp
+#   src/${PROJECT_NAME}/keyboard_teleop.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -160,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/trajectory_planner_node.cpp)
+add_executable(${PROJECT_NAME}_node src/KeyboardTeleop.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -173,9 +146,9 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -224,16 +197,10 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_trajectory_planner.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_keyboard_teleop.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-file(GLOB SOURCES "src/*.cpp")
-add_executable(trajectory_planner ${SOURCES})
-target_link_libraries(trajectory_planner ${catkin_LIBRARIES} yaml-cpp)
-add_dependencies(trajectory_planner trajectory_planner_generate_messages_cpp
-${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
-)
