@@ -36,7 +36,7 @@ void AnkleTraj::planSteps(){
     vector<Matrix3d> first_ankle_rot;
     vector<Vector3d> second_ankle_pos;
     vector<Matrix3d> second_ankle_rot;
-    cout << footSteps_.size() << endl;
+    
     for(int i=0; i<footSteps_.size()-2; i++){
         MatrixXd way_points{
             {footSteps_[i](0), footSteps_[i](0), (footSteps_[i+2](0) + footSteps_[i](0)) / 2, footSteps_[i+2](0), footSteps_[i+2](0)},

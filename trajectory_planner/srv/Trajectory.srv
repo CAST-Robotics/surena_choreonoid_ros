@@ -12,4 +12,5 @@ float64 ankle_height
 float64 dt
 float64 theta
 ---
+int32 traj_size
 bool result

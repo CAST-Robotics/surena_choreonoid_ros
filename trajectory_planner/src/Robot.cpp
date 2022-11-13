@@ -165,9 +165,9 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
     lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
     rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
-    cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
-    cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
-    cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
+    // cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
+    // cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
+    // cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
     // int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
 /*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
@@ -521,6 +521,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     traj.planYawTraj();
     vector<Matrix3d> com_rot = traj.getCoMRot();
     CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
+    
     AnkleTraj ank_traj;
     ank_traj.planInitialDSP();
     ank_traj.planSteps();
@@ -539,6 +540,9 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;
+
+    res.result = true;
+    res.traj_size = dataSize_;
 
     return true;
 }
@@ -583,7 +587,7 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
     robotState_.insert(robotState_.end(), robot_state.begin(), robot_state.end());  
 
     dataSize_ += trajectory_size;
-    res.duration = dataSize_;
+    res.traj_size = dataSize_;
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;
