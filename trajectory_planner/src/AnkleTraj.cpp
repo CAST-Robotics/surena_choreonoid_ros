@@ -25,7 +25,7 @@ void AnkleTraj::planInitialDSP(){
 }
 
 void AnkleTraj::planFinalDSP(){
-    if(footSteps_[footSteps_.size()-1](1)>0)
+    if(leftLast_)
         this->planStance(footSteps_[footSteps_.size()-2], footSteps_[footSteps_.size()-1], footYaws_[footYaws_.size()-1], finalDSPDuration_);
     else
         this->planStance(footSteps_[footSteps_.size()-1], footSteps_[footSteps_.size()-2], footYaws_[footYaws_.size()-1], finalDSPDuration_);

@@ -47,6 +47,7 @@ class MinJerk{
         static int footStepCount_;
         static int trajSize_;
         static bool leftFirst_;
+        static bool leftLast_;
 
         template <typename T>
         T* cubicInterpolate(T theta_ini, T theta_f, T theta_dot_ini, T theta_dot_f, double tf){
@@ -67,4 +68,5 @@ class MinJerk{
         Vector3d* ankle5Poly(Vector3d x0, Vector3d xf, double z_max, double tf);
         Vector3d* minJerkInterpolate(Vector3d theta_ini, Vector3d theta_f, Vector3d theta_dot_ini, Vector3d theta_dot_f, double tf);
         void write2File(Vector3d* input, int size, string file_name);
+        void isLeftLast();
 };

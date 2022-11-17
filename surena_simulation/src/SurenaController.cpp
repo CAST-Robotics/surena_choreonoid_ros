@@ -76,59 +76,87 @@ class SurenaController : public SimpleController{
     int surenaIndex_[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     int sr1Index_[12] = {2, 0, 1, 3, 4, 5, 15, 13, 14, 16, 17, 18};
 
+    double init_com_pos[3]={0, 0, 0.71}, init_com_orient[3]={0, 0, 0}, final_com_pos[3]={0, 0, 0.71}, final_com_orient[3]={0, 0, 0};
+    double init_lankle_pos[3]={0, 0.1, 0}, init_lankle_orient[3]={0, 0, 0}, final_lankle_pos[3]={0, 0.1, 0}, final_lankle_orient[3]={0, 0, 0};
+    double init_rankle_pos[3]={0, -0.1, 0}, init_rankle_orient[3]={0, 0, 0}, final_rankle_pos[3]={0, -0.1, 0}, final_rankle_orient[3]={0, 0, 0};
+
+    double step_width = 0.0;
+    double alpha = 0.44;
+    bool use_file = false;
+    double t_init_double_support = 1;
+    double t_double_support = 0.1;
+    double t_step = 0.9;
+    double t_final_double_support = 1;
+    double step_length = 0.2;
+    double COM_height = 0.68;
+    double step_count = 2;
+    double ankle_height = 0.025;
+    double theta = 0.0;
+
     int size_;
 
 public:
 
-    virtual bool initialize(SimpleControllerIO* io) override
+    void callGeneralTraj(double time)
     {
-        dt = io->timeStep();
-        // General Motion
         ros::ServiceClient gen_client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
         trajectory_planner::GeneralTraj general_traj;
-        general_traj.request.init_com_pos = {0, 0, 0.71};
-        general_traj.request.init_com_orient = {0, 0, 0};
-        general_traj.request.final_com_pos = {0, 0, 0.68};
-        general_traj.request.final_com_orient = {0, 0, 0};
+        general_traj.request.init_com_pos = {init_com_pos[0], init_com_pos[1], init_com_pos[2]};
+        general_traj.request.init_com_orient = {init_com_orient[0], init_com_orient[1], init_com_orient[2]};
+        general_traj.request.final_com_pos = {final_com_pos[0], final_com_pos[1], final_com_pos[2]};
+        general_traj.request.final_com_orient = {final_com_orient[0], final_com_orient[1], final_com_orient[2]};
 
-        general_traj.request.init_lankle_pos = {0, 0.1, 0};
-        general_traj.request.init_lankle_orient = {0, 0, 0};
-        general_traj.request.final_lankle_pos = {0, 0.1, 0};
-        general_traj.request.final_lankle_orient = {0, 0, 0};
+        general_traj.request.init_lankle_pos = {init_lankle_pos[0], init_lankle_pos[1], init_lankle_pos[2]};
+        general_traj.request.init_lankle_orient = {init_lankle_orient[0], init_lankle_orient[1], init_lankle_orient[2]};
+        general_traj.request.final_lankle_pos = {final_lankle_pos[0], final_lankle_pos[1], final_lankle_pos[2]};
+        general_traj.request.final_lankle_orient = {final_lankle_orient[0], final_lankle_orient[1], final_lankle_orient[2]};
 
-        general_traj.request.init_rankle_pos = {0, -0.1, 0};
-        general_traj.request.init_rankle_orient = {0, 0, 0};
-        general_traj.request.final_rankle_pos = {0, -0.1, 0};
-        general_traj.request.final_rankle_orient = {0, 0, 0};
+        general_traj.request.init_rankle_pos = {init_rankle_pos[0], init_rankle_pos[1], init_rankle_pos[2]};
+        general_traj.request.init_rankle_orient = {init_rankle_orient[0], init_rankle_orient[1], init_rankle_orient[2]};
+        general_traj.request.final_rankle_pos = {final_rankle_pos[0], final_rankle_pos[1], final_rankle_pos[2]};
+        general_traj.request.final_rankle_orient = {final_rankle_orient[0], final_rankle_orient[1], final_rankle_orient[2]};
 
-        general_traj.request.time = 2;
+        general_traj.request.time = time;
         general_traj.request.dt = dt;
 
         gen_client.call(general_traj);
-        //DCM Walk
+        size_ = general_traj.response.traj_size;
+    }
+
+    void callTraj(){
         ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
         trajectory_planner::Trajectory traj;
-    
-        traj.request.step_width = 0.0;
-        traj.request.alpha = 0.44;
-        traj.request.use_file = false;
-        traj.request.t_init_double_support = 1;
-        traj.request.t_double_support = 0.1;
-        traj.request.t_step = 0.9;
-        traj.request.t_final_double_support = 1;
-        traj.request.step_length = 0.2;
-        traj.request.COM_height = 0.68;
-        traj.request.step_count = 8;
-        traj.request.ankle_height = 0.025;
-        traj.request.theta = 0.0;
+
+        traj.request.step_width = step_width;
+        traj.request.alpha = alpha;
+        traj.request.use_file = use_file;
+        traj.request.t_init_double_support = t_init_double_support;
+        traj.request.t_double_support = t_double_support;
+        traj.request.t_step = t_step;
+        traj.request.t_final_double_support = t_final_double_support;
+        traj.request.step_length = step_length;
+        traj.request.COM_height = COM_height;
+        traj.request.step_count = step_count;
+        traj.request.ankle_height = ankle_height;
+        traj.request.theta = theta;
         traj.request.dt = dt;
         client.call(traj);
         result = traj.response.result;
         size_ = traj.response.traj_size;
+    }
 
+    virtual bool initialize(SimpleControllerIO* io) override
+    {
+        dt = io->timeStep();
+        final_com_pos[2] = 0.68;
+        callGeneralTraj(2);
+        //callTraj();
+        //callTraj();
+        theta = 0.15;
+        step_count = 4;
+        callTraj();
+        //DCM Walk
         result = true;
-
-        
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
         rightForceSensor = ioBody->findDevice<ForceSensor>("RightAnkleForceSensor");
