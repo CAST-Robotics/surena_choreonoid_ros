@@ -8,6 +8,7 @@
 #include "trajectory_planner/GeneralTraj.h"
 #include "surena_simulation/bump.h"
 #include "std_srvs/Empty.h"
+#include <std_msgs/Int32.h>
 
 using namespace std;
 using namespace cnoid;
@@ -64,6 +65,8 @@ class SurenaController : public SimpleController{
   
     bool result;
     ros::NodeHandle nh;
+    ros::Subscriber keyboardCommandSub_ = nh.subscribe("/keyboard_command", 100, &SurenaController::commandHandler, this);
+
     int idx = 0;
     double dt;
     double qref[29];
@@ -145,16 +148,46 @@ public:
         size_ = traj.response.traj_size;
     }
 
+    void commandHandler(const std_msgs::Int32 &msg){
+        int command = msg.data;
+        switch (command)
+        {
+        case 119: // w:move forward
+            step_count = 2;
+            step_length = 0.15;
+            callTraj();
+            break;
+
+        case 115: // s:move backward
+            step_count = 2;
+            step_length = -0.15;
+            callTraj();
+            break;
+
+        case 97: // a:turn left
+            step_count = 2;
+            step_length = -0.15;
+            theta = 0.2;
+            callTraj();
+            break;
+
+        case 100: // d:turn right
+            step_count = 2;
+            step_length = 0.15;
+            theta = 0.2;
+            callTraj();
+            break;
+
+        default:
+            break;
+        }
+    }
+
     virtual bool initialize(SimpleControllerIO* io) override
     {
         dt = io->timeStep();
         final_com_pos[2] = 0.68;
         callGeneralTraj(2);
-        //callTraj();
-        //callTraj();
-        theta = 0.15;
-        step_count = 4;
-        callTraj();
         //DCM Walk
         result = true;
         ioBody = io->body();
@@ -267,7 +300,6 @@ public:
                 qold[i] = q;
                 joint->u() = u;
             }
-            idx ++;
         }
         return true;
     }
