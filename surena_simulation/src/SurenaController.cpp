@@ -155,12 +155,14 @@ public:
         case 119: // w:move forward
             step_count = 2;
             step_length = 0.15;
+            theta = 0.0;
             callTraj();
             break;
 
         case 115: // s:move backward
             step_count = 2;
             step_length = -0.15;
+            theta = 0.0;
             callTraj();
             break;
 
@@ -301,6 +303,7 @@ public:
                 joint->u() = u;
             }
         }
+        ros::spinOnce();
         return true;
     }
 };

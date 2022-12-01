@@ -16,8 +16,15 @@ void write2File(Vector3d* input, int size, string file_name="data"){
 
 Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
-    trajGenServer_ = nh->advertiseService("/traj_gen", 
+    trajNode_.setCallbackQueue(&trajCbQueue_);
+    trajGenServer_ = trajNode_.advertiseService("/traj_gen", 
             &Robot::trajGenCallback, this);
+    std::thread trajThread([this](){
+        ros::SingleThreadedSpinner traj_spinner;
+        traj_spinner.spin(&this->trajCbQueue_);
+    });
+    trajThread.detach();
+    
     jntAngsServer_ = nh->advertiseService("/jnt_angs", 
             &Robot::jntAngsCallback, this);
     generalTrajServer_ = nh->advertiseService("/general_traj", 
@@ -165,9 +172,9 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
     lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
     rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
-    cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
-    cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
-    cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
+    // cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
+    // cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
+    // cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
     // int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
 /*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
