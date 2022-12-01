@@ -16,8 +16,15 @@ void write2File(Vector3d* input, int size, string file_name="data"){
 
 Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
-    trajGenServer_ = nh->advertiseService("/traj_gen", 
+    trajNode_.setCallbackQueue(&trajCbQueue_);
+    trajGenServer_ = trajNode_.advertiseService("/traj_gen", 
             &Robot::trajGenCallback, this);
+    std::thread trajThread([this](){
+        ros::SingleThreadedSpinner traj_spinner;
+        traj_spinner.spin(&this->trajCbQueue_);
+    });
+    trajThread.detach();
+    
     jntAngsServer_ = nh->advertiseService("/jnt_angs", 
             &Robot::jntAngsCallback, this);
     generalTrajServer_ = nh->advertiseService("/general_traj", 
@@ -102,8 +109,8 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
     onlineWalk_ = robot_ctrl;
     quatEKF_ = new QuatEKF();
     lieEKF_ = new LieEKF();
-    stepPlanner_ = new FootStepPlanner(torso_);
-    ZMPPlanner_ = new ZMPPlanner();
+    // stepPlanner_ = new FootStepPlanner(torso_);
+    // ZMPPlanner_ = new ZMPPlanner();
 
     //cout << "Robot Object has been Created" << endl;
 }
@@ -165,9 +172,9 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
     lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
     rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
-    cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
-    cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
-    cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
+    // cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
+    // cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
+    // cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
     // int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
 /*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
@@ -500,20 +507,22 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     // trajSizes_.push_back(dataSize_);
     // trajContFlags_.push_back(false);
     // isTrajAvailable_ = true;
-    ZMPPlanner_->setDt(dt_);
+    FootStepPlanner step_planner(torso_);
+    ZMPPlanner zmp_planner;
+    zmp_planner.setDt(dt_);
     if(use_file){
         string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
-        ZMPPlanner_->setConfigPath(config_path);
+        zmp_planner.setConfigPath(config_path);
     }else{
-        stepPlanner_->setParams(step_len, step_width, num_step, 0.0, theta);
-        stepPlanner_->planSteps();
-        ZMPPlanner_->setFootStepsData(stepPlanner_->getFootPrints(), stepPlanner_->getFootYaws());
-        ZMPPlanner_->setParams(init_ds, t_ds, t_s, final_ds, swing_height);
+        step_planner.setParams(step_len, step_width, num_step, 0.0, theta);
+        step_planner.planSteps();
+        zmp_planner.setFootStepsData(step_planner.getFootPrints(), step_planner.getFootYaws());
+        zmp_planner.setParams(init_ds, t_ds, t_s, final_ds, swing_height);
     }
-    ZMPPlanner_->planInitialDSPZMP();
-    ZMPPlanner_->planStepsZMP();
-    ZMPPlanner_->planFinalDSPZMP();
-    PreviewTraj traj(ZMPPlanner_, COM_height_, 1.8 / dt_, dt_);
+    zmp_planner.planInitialDSPZMP();
+    zmp_planner.planStepsZMP();
+    zmp_planner.planFinalDSPZMP();
+    PreviewTraj traj(&zmp_planner, COM_height_, 1.8 / dt_, dt_);
     traj.computeWeight();
     traj.computeTraj();
     vector<Vector3d> com = traj.getCoMPos();
@@ -521,6 +530,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     traj.planYawTraj();
     vector<Matrix3d> com_rot = traj.getCoMRot();
     CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
+    
     AnkleTraj ank_traj;
     ank_traj.planInitialDSP();
     ank_traj.planSteps();
@@ -539,6 +549,9 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;
+
+    res.result = true;
+    res.traj_size = dataSize_;
 
     return true;
 }
@@ -583,7 +596,7 @@ bool Robot::generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
     robotState_.insert(robotState_.end(), robot_state.begin(), robot_state.end());  
 
     dataSize_ += trajectory_size;
-    res.duration = dataSize_;
+    res.traj_size = dataSize_;
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;

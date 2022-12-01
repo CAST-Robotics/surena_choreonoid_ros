@@ -9,6 +9,7 @@ vector<Vector3d> MinJerk::footSteps_;
 vector<double> MinJerk::footYaws_;
 double MinJerk::dt_;
 bool MinJerk::leftFirst_;
+bool MinJerk::leftLast_;
 int MinJerk::footStepCount_;
 int MinJerk::trajSize_;
 
@@ -102,6 +103,8 @@ void MinJerk::parseConfig(YAML::Node config){
         leftFirst_ = true;
     else
         leftFirst_ = false;
+
+    isLeftLast();
 }
 
 void MinJerk::setParams(double init_dsp, double dsp, double ssp, double final_dsp, double step_height){
@@ -123,6 +126,24 @@ void MinJerk::setFootStepsData(vector<Vector3d> foot_steps, vector<double> foot_
         leftFirst_ = true;
     else
         leftFirst_ = false;
+
+    isLeftLast();
+}
+
+void MinJerk::isLeftLast(){
+    int last_iter = footSteps_.size() - 1;
+    double angle_rem = fmod(footYaws_[last_iter], 2 * M_PI);
+    if(angle_rem < M_PI/2 || angle_rem > 3*M_PI/2){
+        if(footSteps_[last_iter](1) - footSteps_[last_iter-1](1) > 0)
+            leftLast_ = true;
+        else
+            leftLast_ = false;
+    }else{
+        if(footSteps_[last_iter](1) - footSteps_[last_iter-1](1) > 0)
+            leftLast_ = false;
+        else
+            leftLast_ = true;
+    }
 }
 
 int MinJerk::getTrajSize(){

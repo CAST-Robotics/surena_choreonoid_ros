@@ -25,7 +25,7 @@ void AnkleTraj::planInitialDSP(){
 }
 
 void AnkleTraj::planFinalDSP(){
-    if(footSteps_[footSteps_.size()-1](1)>0)
+    if(leftLast_)
         this->planStance(footSteps_[footSteps_.size()-2], footSteps_[footSteps_.size()-1], footYaws_[footYaws_.size()-1], finalDSPDuration_);
     else
         this->planStance(footSteps_[footSteps_.size()-1], footSteps_[footSteps_.size()-2], footYaws_[footYaws_.size()-1], finalDSPDuration_);
@@ -36,7 +36,7 @@ void AnkleTraj::planSteps(){
     vector<Matrix3d> first_ankle_rot;
     vector<Vector3d> second_ankle_pos;
     vector<Matrix3d> second_ankle_rot;
-    cout << footSteps_.size() << endl;
+    
     for(int i=0; i<footSteps_.size()-2; i++){
         MatrixXd way_points{
             {footSteps_[i](0), footSteps_[i](0), (footSteps_[i+2](0) + footSteps_[i](0)) / 2, footSteps_[i+2](0), footSteps_[i+2](0)},

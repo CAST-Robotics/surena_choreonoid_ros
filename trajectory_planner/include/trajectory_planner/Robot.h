@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <ros/callback_queue.h>
 #include <ros/console.h>
 #include <ros/package.h>
 #include <std_srvs/Empty.h>
@@ -27,6 +28,7 @@
 #include "fstream"
 #include <random>
 #include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -129,6 +131,9 @@ class Robot{
         ros::ServiceServer trajGenServer_;
         ros::ServiceServer generalTrajServer_;
         ros::ServiceServer resetTrajServer_;
+
+        ros::NodeHandle trajNode_;
+        ros::CallbackQueue trajCbQueue_;
 
         ros::Publisher baseOdomPub_;
         tf::TransformBroadcaster baseOdomBroadcaster_;
