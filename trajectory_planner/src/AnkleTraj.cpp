@@ -38,11 +38,11 @@ void AnkleTraj::planSteps(){
     vector<Matrix3d> second_ankle_rot;
     
     for(int i=0; i<footSteps_.size()-2; i++){
-        MatrixXd way_points{
-            {footSteps_[i](0), footSteps_[i](0), (footSteps_[i+2](0) + footSteps_[i](0)) / 2, footSteps_[i+2](0), footSteps_[i+2](0)},
-            {footSteps_[i](1), footSteps_[i](1), (footSteps_[i+2](1) + footSteps_[i](1)) / 2, footSteps_[i+2](1), footSteps_[i+2](1)},
-            {footSteps_[i](2), footSteps_[i](2) + 0.02, footSteps_[i](2) + stepHeight_, footSteps_[i+2](2) + 0.02, footSteps_[i+2](2)}
-            };
+        MatrixXd way_points(3, 5);
+        way_points.row(0) << footSteps_[i](0), footSteps_[i](0), (footSteps_[i+2](0) + footSteps_[i](0)) / 2, footSteps_[i+2](0), footSteps_[i+2](0);
+        way_points.row(1) << footSteps_[i](1), footSteps_[i](1), (footSteps_[i+2](1) + footSteps_[i](1)) / 2, footSteps_[i+2](1), footSteps_[i+2](1);
+        way_points.row(2) << footSteps_[i](2), footSteps_[i](2) + 0.02, footSteps_[i](2) + stepHeight_, footSteps_[i+2](2) + 0.02, footSteps_[i+2](2);
+        
         MatrixXd vel_points = MatrixXd::Zero(3, 5);
         vel_points(0, 2) = (footSteps_[i+2](0) - footSteps_[i](0)) / SSPDuration_;
         VectorXd time_points(5);
@@ -50,7 +50,8 @@ void AnkleTraj::planSteps(){
         MatrixXd traj;
         this->cubicPolyTraj(way_points, time_points, dt_, vel_points, traj);
 
-        MatrixXd yaw_way_points{{footYaws_[i], footYaws_[i+2]}};
+        MatrixXd yaw_way_points(1,2);
+        yaw_way_points << footYaws_[i], footYaws_[i+2];
         MatrixXd yaw_vel_points = MatrixXd::Zero(1, 2);
         VectorXd yaw_time_points(2);
         yaw_time_points << 0.0, SSPDuration_;

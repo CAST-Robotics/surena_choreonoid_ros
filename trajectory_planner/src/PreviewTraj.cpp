@@ -112,7 +112,8 @@ void PreviewTraj::planYawTraj(){
 
     for(int i=1; i<size-1; i++){
         final_yaw = (yaws[i] + yaws[i+1]) / 2;
-        MatrixXd yaw_way_points{{init_yaw, final_yaw}};
+        MatrixXd yaw_way_points(1,2);
+        yaw_way_points << init_yaw, final_yaw;
         MatrixXd yaw_vel_points = MatrixXd::Zero(1, 2);
         VectorXd yaw_time_points(2);
         yaw_time_points << 0.0, step_time;

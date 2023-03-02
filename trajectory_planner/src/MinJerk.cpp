@@ -186,13 +186,12 @@ void MinJerk::cubicPolyTraj(const MatrixXd& way_points, const VectorXd& time_poi
 Vector4d MinJerk::genCubicCoeffs(const double pos_pts[], const double vel_pts[], double final_time){
     
     Vector4d coeff_vec{pos_pts[0], vel_pts[0], 0, 0};
-    MatrixXd t_mat{
-        {1, final_time},
-        {0, 1}};
+    MatrixXd t_mat(2, 2);
+    t_mat << 1, final_time, 0, 1;
+
     Vector2d B = Vector2d(pos_pts[1], vel_pts[1]) - t_mat * coeff_vec.segment(0, 2);
-    MatrixXd inv_t_mat{
-        {3.0 / pow(final_time, 2), -1.0 / final_time},
-        {-2.0 / pow(final_time, 3), 1.0 / pow(final_time, 2)}};
+    MatrixXd inv_t_mat(2, 2);
+    inv_t_mat << 3.0 / pow(final_time, 2), -1.0 / final_time, -2.0 / pow(final_time, 3), 1.0 / pow(final_time, 2);
 
     coeff_vec.segment(2,2) = inv_t_mat * B;
     return coeff_vec;
