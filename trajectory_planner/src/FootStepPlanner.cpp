@@ -2,7 +2,7 @@
 
 FootStepPlanner::FootStepPlanner(double torso) : torso_{torso}
 {
-
+    isTurn_ = false;
 }
 
 FootStepPlanner::~FootStepPlanner()
@@ -20,6 +20,8 @@ void FootStepPlanner::setParams(double step_length, double step_width, double st
 
     if(stepRotAngle_ != 0)
         isTurn_ = true;
+    else
+        isTurn_ = false;
 }
 
 void FootStepPlanner::planSteps(){
