@@ -18,7 +18,7 @@ Robot::Robot(ros::NodeHandle *nh, Controller robot_ctrl){
 
     trajNode_.setCallbackQueue(&trajCbQueue_);
     trajGenServer_ = trajNode_.advertiseService("/traj_gen", 
-            &Robot::trajGenCallback, this);
+            &Robot::trajCallback, this);
     std::thread trajThread([this](){
         ros::SingleThreadedSpinner traj_spinner;
         traj_spinner.spin(&this->trajCbQueue_);
@@ -172,9 +172,9 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     pelvis << CoMPos_[iter](0), CoMPos_[iter](1), CoMPos_[iter](2);
     lfoot << lAnklePos_[iter](0), lAnklePos_[iter](1), lAnklePos_[iter](2);
     rfoot << rAnklePos_[iter](0), rAnklePos_[iter](1), rAnklePos_[iter](2);
-    // cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
-    // cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
-    // cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
+    cout << CoMPos_[iter](0) << ", " << CoMPos_[iter](1) << ", " << CoMPos_[iter](2) << ", ";
+    cout << lAnklePos_[iter](0) << ", " << lAnklePos_[iter](1) << ", " << lAnklePos_[iter](2) << ", ";
+    cout << rAnklePos_[iter](0) << ", " << rAnklePos_[iter](1) << ", " << rAnklePos_[iter](2) << endl;
     // int traj_index = findTrajIndex(trajSizes_, trajSizes_.size(), iter);
 /*
     if(iter > trajSizes_[0] && iter < trajSizes_[1]){
@@ -197,7 +197,7 @@ void Robot::spinOnline(int iter, double config[], double jnt_vel[], Vector3d tor
     }
 */
     // if(trajContFlags_[traj_index] == true){
-    //     Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], COM_height_);
+    //     Vector3d zmp_ref = onlineWalk_.dcmController(xiDesired_[iter+1], xiDot_[iter+1], realXi_[iter], CoM_height_);
     //     Vector3d cont_out = onlineWalk_.comController(CoMPos_[iter], CoMDot_[iter+1], FKCoM_[iter], zmp_ref, realZMP_[iter]);
     //     pelvis = cont_out;
     // }
@@ -297,7 +297,7 @@ void Robot::updateSolePosition(){
     else if (index_ == 1) {f1 = FKCoM_[index_-1]; f0 = Vector3d::Zero(3);}
     else {f1 = FKCoM_[index_-1]; f0 = FKCoM_[index_-2];} 
     FKCoMDot_[index_] = (f0 - 4 * f1 + 3 * FKCoM_[index_])/(2 * this->dt_);
-    realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/COM_height_);
+    realXi_[index_] = FKCoM_[index_] + FKCoMDot_[index_] / sqrt(K_G/CoM_height_);
 
 }
 
@@ -462,32 +462,109 @@ void Robot::distributeFT(Vector3d zmp, Vector3d r_foot,Vector3d l_foot, Vector3d
     r_wrench(2) = r_wrench(0) * (zmp(0) - r_foot(0));
 }
 
+// Extract input parameters from the request message
+void Robot::extractTrajParams(const trajectory_planner::Trajectory::Request& req) {
+    num_steps_ = req.step_count;
+    CoM_height_ = req.COM_height;
+    step_len_ = req.step_length;
+    step_width_ = req.step_width;
+    t_init_ds_ = req.t_init_double_support;
+    t_ds_ = req.t_double_support;
+    t_step_ = req.t_step;
+    t_final_ds_ = req.t_final_double_support;
+    swing_height_ = req.ankle_height;
+    theta_ = req.theta;
+    use_file_ = req.use_file;
+    dt_ = req.dt;
+}
 
-bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
+// Generate footstep plan
+void Robot::planFootSteps() {
+    FootStepPlanner step_planner(torso_);
+    ZMPPlanner zmp_planner;
+    zmp_planner.setDt(dt_);
+    if (use_file_)
+    {
+        string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
+        zmp_planner.setConfigPath(config_path);
+    }
+    else
+    {
+        step_planner.setParams(step_len_, step_width_, num_steps_, 0.0, theta_);
+        step_planner.planSteps();
+        zmp_planner.setFootStepsData(step_planner.getFootPrints(), step_planner.getFootYaws());
+        zmp_planner.setParams(t_init_ds_, t_ds_, t_step_, t_final_ds_, swing_height_);
+    }
+
+    // Generate ZMP trajectory
+    zmp_planner.planInitialDSPZMP();
+    zmp_planner.planStepsZMP();
+    zmp_planner.planFinalDSPZMP();
+    ZMPPlanner_ = zmp_planner;
+}
+
+void Robot::getInitCondition(Vector3d& x0, Vector3d& y0)
+{
+    if(CoMPos_.size() != 0)
+    {
+        x0 = Vector3d(0, 0, 0);
+        y0 = Vector3d(CoMPos_.back()(1), 0, 0);
+    }
+    else
+    {
+        x0 = Vector3d(0, 0, 0);
+        y0 = Vector3d(0, 0, 0);
+    }
+}
+
+// Generate CoM trajectory
+void Robot::planCoMTraj() {
+    PreviewTraj traj(&ZMPPlanner_, CoM_height_, 1.8 / dt_, dt_);
+
+    Vector3d x0, y0;
+    getInitCondition(x0, y0);
+    traj.setInitCondition(x0, y0);
+
+    traj.computeWeight();
+    traj.computeTraj();
+
+    vector<Vector3d> com = traj.getCoMPos();
+    CoMPos_.insert(CoMPos_.end(), com.begin(), com.end());
+
+    traj.planYawTraj();
+    vector<Matrix3d> com_rot = traj.getCoMRot();
+    CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
+}
+
+// Generate ankle trajectories
+void Robot::planAnkleTraj() {
+    AnkleTraj ank_traj;
+    ank_traj.planInitialDSP();
+    ank_traj.planSteps();
+    ank_traj.planFinalDSP();
+    vector<Vector3d> left_ankle_pos = ank_traj.getLAnklePos();
+    lAnklePos_.insert(lAnklePos_.end(), left_ankle_pos.begin(), left_ankle_pos.end());
+    vector<Matrix3d> left_ankle_rot = ank_traj.getLAnkleRot();
+    lAnkleRot_.insert(lAnkleRot_.end(), left_ankle_rot.begin(), left_ankle_rot.end());
+    vector<Vector3d> right_ankle_pos = ank_traj.getRAnklePos();
+    rAnklePos_.insert(rAnklePos_.end(), right_ankle_pos.begin(), right_ankle_pos.end());
+    vector<Matrix3d> right_ankle_rot = ank_traj.getRAnkleRot();
+    rAnkleRot_.insert(rAnkleRot_.end(), right_ankle_rot.begin(), right_ankle_rot.end());
+}
+
+bool Robot::trajCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res)
 {
     /*
-        ROS service for generating robot COM & ankles trajectories
+        ROS service for generating robot CoM & ankles trajectories
     */
     //ROS_INFO("Generating Trajectory started.");
     //auto start = high_resolution_clock::now();
     // int trajectory_size = int(((req.step_count + 2) * req.t_step) / req.dt);
     // double alpha = req.alpha;
-    bool use_file = req.use_file;
-    double init_ds = req.t_init_double_support;
-    double t_ds = req.t_double_support;
-    double t_s = req.t_step;
-    double final_ds = req.t_final_double_support;
-    COM_height_ = req.COM_height;
-    double step_len = req.step_length;
-    double step_width = req.step_width;
-    int num_step = req.step_count;
-    dt_ = req.dt;
-    float theta = req.theta;
-    double swing_height = req.ankle_height;
     // double init_COM_height = thigh_ + shank_;  // SURENA IV initial height 
     
-    // DCMPlanner* trajectoryPlanner = new DCMPlanner(COM_height_, t_s, t_ds, dt_, num_step + 2, alpha, theta);
+    // DCMPlanner* trajectoryPlanner = new DCMPlanner(CoM_height_, t_s, t_ds, dt_, num_step + 2, alpha, theta);
     // Ankle* anklePlanner = new Ankle(t_s, t_ds, swing_height, alpha, num_step, dt_, theta);
     // Vector3d* dcm_rf = new Vector3d[num_step + 2];  // DCM rF
     // Vector3d* ankle_rf = new Vector3d[num_step + 2]; // Ankle rF
@@ -499,7 +576,7 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     // anklePlanner->generateTrajectory();
     // delete[] ankle_rf;
     // onlineWalk_.setDt(req.dt);
-    // onlineWalk_.setInitCoM(Vector3d(0.0,0.0,COM_height_));
+    // onlineWalk_.setInitCoM(Vector3d(0.0,0.0,CoM_height_));
 
     // CoMDot_ = trajectoryPlanner->get_CoMDot();
     // //ROS_INFO("trajectory generated");
@@ -507,45 +584,20 @@ bool Robot::trajGenCallback(trajectory_planner::Trajectory::Request  &req,
     // trajSizes_.push_back(dataSize_);
     // trajContFlags_.push_back(false);
     // isTrajAvailable_ = true;
-    FootStepPlanner step_planner(torso_);
-    ZMPPlanner zmp_planner;
-    zmp_planner.setDt(dt_);
-    if(use_file){
-        string config_path = ros::package::getPath("trajectory_planner") + "/config/config.yaml";
-        zmp_planner.setConfigPath(config_path);
-    }else{
-        step_planner.setParams(step_len, step_width, num_step, 0.0, theta);
-        step_planner.planSteps();
-        zmp_planner.setFootStepsData(step_planner.getFootPrints(), step_planner.getFootYaws());
-        zmp_planner.setParams(init_ds, t_ds, t_s, final_ds, swing_height);
-    }
-    zmp_planner.planInitialDSPZMP();
-    zmp_planner.planStepsZMP();
-    zmp_planner.planFinalDSPZMP();
-    PreviewTraj traj(&zmp_planner, COM_height_, 1.8 / dt_, dt_);
-    traj.computeWeight();
-    traj.computeTraj();
-    vector<Vector3d> com = traj.getCoMPos();
-    CoMPos_.insert(CoMPos_.end(), com.begin(), com.end());
-    traj.planYawTraj();
-    vector<Matrix3d> com_rot = traj.getCoMRot();
-    CoMRot_.insert(CoMRot_.end(), com_rot.begin(), com_rot.end());
-    
-    AnkleTraj ank_traj;
-    ank_traj.planInitialDSP();
-    ank_traj.planSteps();
-    ank_traj.planFinalDSP();
-    vector<Vector3d> lank = ank_traj.getLAnklePos();
-    lAnklePos_.insert(lAnklePos_.end(), lank.begin(), lank.end());
-    vector<Matrix3d> lank_rot = ank_traj.getLAnkleRot();
-    lAnkleRot_.insert(lAnkleRot_.end(), lank_rot.begin(), lank_rot.end());
-    vector<Vector3d> rank = ank_traj.getRAnklePos();
-    rAnklePos_.insert(rAnklePos_.end(), rank.begin(), rank.end());
-    vector<Matrix3d> rank_rot = ank_traj.getRAnkleRot();
-    rAnkleRot_.insert(rAnkleRot_.end(), rank_rot.begin(), rank_rot.end());
 
-    int trajectory_size = com.size();
-    dataSize_ += trajectory_size;
+    // Extract request parameters
+    extractTrajParams(req);
+
+    // Plan foot steps
+    planFootSteps();
+
+    // Plan COM trajectory
+    planCoMTraj();
+
+    // Plan ankle trajectories
+    planAnkleTraj();
+
+    dataSize_ = CoMPos_.size();
     trajSizes_.push_back(dataSize_);
     trajContFlags_.push_back(false);
     isTrajAvailable_ = true;

@@ -30,6 +30,17 @@ PreviewTraj::PreviewTraj(ZMPPlanner* zmp_planner, double robot_height, int n, do
     CoMPos_.push_back(Vector3d(0, 0, robotHeight_));
 }
 
+void PreviewTraj::setInitCondition(const Vector3d& x0, const Vector3d& y0)
+{
+    x_[0] = x0;
+    y_[0] = y0;
+
+    if(CoMPos_.size() != 0)
+        CoMPos_[0] = Vector3d(x0(0), y0(0), robotHeight_);
+    else
+        CoMPos_.push_back(Vector3d(x0(0), y0(0), robotHeight_));
+}
+
 PreviewTraj::~PreviewTraj(){
 }
 

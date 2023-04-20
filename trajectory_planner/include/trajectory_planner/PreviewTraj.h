@@ -22,6 +22,7 @@ class PreviewTraj {
         ~PreviewTraj();
 
         void setDt(double dt);
+        void setInitCondition(const Vector3d& x0, const Vector3d& y0);
         void computeWeight();
         void computeTraj();
         void planYawTraj();
@@ -47,6 +48,8 @@ class PreviewTraj {
         MatrixXd Gx_;
         VectorXd Gd_;
         vector<Vector3d> CoMPos_;
+        vector<Vector3d> CoMVel_;
+        vector<Vector3d> CoMAcc_;
         vector<Matrix3d> CoMRot_;
 
         Vector3d error_;

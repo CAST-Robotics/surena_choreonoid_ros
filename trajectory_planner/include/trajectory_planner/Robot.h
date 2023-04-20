@@ -40,9 +40,16 @@ class Robot{
 
         void spinOnline(int iter, double config[], double jnt_vel[], Vector3d torque_r, Vector3d torque_l, double f_r, double f_l, Vector3d gyro, Vector3d accelerometer, double* joint_angles);
         void spinOffline(int iter, double* config);
+
+        void extractTrajParams(const trajectory_planner::Trajectory::Request& req);
+        void planFootSteps();
+        void planCoMTraj();
+        void getInitCondition(Vector3d& x0, Vector3d& y0);
+        void planAnkleTraj();
+        
         bool jntAngsCallback(trajectory_planner::JntAngs::Request  &req,
                             trajectory_planner::JntAngs::Response &res);
-        bool trajGenCallback(trajectory_planner::Trajectory::Request  &req,
+        bool trajCallback(trajectory_planner::Trajectory::Request  &req,
                             trajectory_planner::Trajectory::Response &res);
         bool generalTrajCallback(trajectory_planner::GeneralTraj::Request  &req,
                                 trajectory_planner::GeneralTraj::Response &res);
@@ -59,8 +66,20 @@ class Robot{
         double thigh_;
         double shank_;
         double torso_;
-        double dt_;
         double mass_;
+
+        int num_steps_ = 2;
+        double CoM_height_ = 0.68;
+        double step_len_ = 0.15;
+        double step_width_ = 0;
+        double t_init_ds_ = 1;
+        double t_ds_ = 0.1;
+        double t_step_ = 1;
+        double t_final_ds_ = 1;
+        double swing_height_ = 0.025;
+        double theta_ = 0;
+        double dt_ = 0.005;
+        bool use_file_ = true;
 
         double joints_[12];
 
@@ -70,7 +89,7 @@ class Robot{
         QuatEKF* quatEKF_;
         LieEKF* lieEKF_;
         FootStepPlanner* stepPlanner_;
-        ZMPPlanner* ZMPPlanner_;
+        ZMPPlanner ZMPPlanner_;
 
         template <typename T>
         T* appendTrajectory(T* old_traj, T* new_traj, int old_size, int new_size){
@@ -146,5 +165,4 @@ class Robot{
         int dataSize_;
         vector<int> trajSizes_;
         vector<bool> trajContFlags_;
-        double COM_height_;
 };
