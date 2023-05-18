@@ -25,6 +25,7 @@ class Ankle: private MinJerk{
         double height_;
         double theta_;
         int yawSign_;
+        int length_;
 
         Vector3d* footPose_;
         Vector3d* lFoot_;

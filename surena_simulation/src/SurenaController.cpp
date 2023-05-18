@@ -3,9 +3,11 @@
 #include <cnoid/BodyLoader>
 #include <eigen3/Eigen/Eigen>
 #include <ros/ros.h>
+#include <ros/package.h>
 #include "trajectory_planner/Trajectory.h"
 #include "trajectory_planner/JntAngs.h"
 #include "trajectory_planner/GeneralTraj.h"
+#include "trajectory_planner/Robot.h"
 #include "surena_simulation/bump.h"
 #include "std_srvs/Empty.h"
 #include <std_msgs/Int32.h>
@@ -63,7 +65,6 @@ const double dgain[] = {
 */
 class SurenaController : public SimpleController{
   
-    bool result;
     ros::NodeHandle nh;
     ros::Subscriber keyboardCommandSub_ = nh.subscribe("/keyboard_command", 100, &SurenaController::commandHandler, this);
 
@@ -76,12 +77,15 @@ class SurenaController : public SimpleController{
     ForceSensor* rightForceSensor;
     AccelerationSensor* accelSensor;
     RateGyroSensor* gyro;
+    Robot* robot;
     int surenaIndex_[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     int sr1Index_[12] = {2, 0, 1, 3, 4, 5, 15, 13, 14, 16, 17, 18};
 
     double init_com_pos[3]={0, 0, 0.71}, init_com_orient[3]={0, 0, 0}, final_com_pos[3]={0, 0, 0.71}, final_com_orient[3]={0, 0, 0};
     double init_lankle_pos[3]={0, 0.1, 0}, init_lankle_orient[3]={0, 0, 0}, final_lankle_pos[3]={0, 0.1, 0}, final_lankle_orient[3]={0, 0, 0};
     double init_rankle_pos[3]={0, -0.1, 0}, init_rankle_orient[3]={0, 0, 0}, final_rankle_pos[3]={0, -0.1, 0}, final_rankle_orient[3]={0, 0, 0};
+    double jnt_command[12];
+    int status;
 
     double step_width = 0.0;
     double alpha = 0.44;
@@ -94,6 +98,7 @@ class SurenaController : public SimpleController{
     double COM_height = 0.68;
     double step_count = 2;
     double ankle_height = 0.025;
+    double step_height = 0;
     double theta = 0.0;
 
     int size_;
@@ -102,50 +107,15 @@ public:
 
     void callGeneralTraj(double time)
     {
-        ros::ServiceClient gen_client=nh.serviceClient<trajectory_planner::GeneralTraj>("/general_traj");
-        trajectory_planner::GeneralTraj general_traj;
-        general_traj.request.init_com_pos = {init_com_pos[0], init_com_pos[1], init_com_pos[2]};
-        general_traj.request.init_com_orient = {init_com_orient[0], init_com_orient[1], init_com_orient[2]};
-        general_traj.request.final_com_pos = {final_com_pos[0], final_com_pos[1], final_com_pos[2]};
-        general_traj.request.final_com_orient = {final_com_orient[0], final_com_orient[1], final_com_orient[2]};
-
-        general_traj.request.init_lankle_pos = {init_lankle_pos[0], init_lankle_pos[1], init_lankle_pos[2]};
-        general_traj.request.init_lankle_orient = {init_lankle_orient[0], init_lankle_orient[1], init_lankle_orient[2]};
-        general_traj.request.final_lankle_pos = {final_lankle_pos[0], final_lankle_pos[1], final_lankle_pos[2]};
-        general_traj.request.final_lankle_orient = {final_lankle_orient[0], final_lankle_orient[1], final_lankle_orient[2]};
-
-        general_traj.request.init_rankle_pos = {init_rankle_pos[0], init_rankle_pos[1], init_rankle_pos[2]};
-        general_traj.request.init_rankle_orient = {init_rankle_orient[0], init_rankle_orient[1], init_rankle_orient[2]};
-        general_traj.request.final_rankle_pos = {final_rankle_pos[0], final_rankle_pos[1], final_rankle_pos[2]};
-        general_traj.request.final_rankle_orient = {final_rankle_orient[0], final_rankle_orient[1], final_rankle_orient[2]};
-
-        general_traj.request.time = time;
-        general_traj.request.dt = dt;
-
-        gen_client.call(general_traj);
-        size_ = general_traj.response.traj_size;
+        robot->generalTrajGen(dt, time, init_com_pos, final_com_pos, init_com_orient, final_com_orient,
+                              init_lankle_pos, final_lankle_pos, init_lankle_orient, final_lankle_orient,
+                              init_rankle_pos, final_rankle_pos, init_rankle_orient, final_rankle_orient);
     }
 
     void callTraj(){
-        ros::ServiceClient client=nh.serviceClient<trajectory_planner::Trajectory>("/traj_gen");
-        trajectory_planner::Trajectory traj;
-
-        traj.request.step_width = step_width;
-        traj.request.alpha = alpha;
-        traj.request.use_file = use_file;
-        traj.request.t_init_double_support = t_init_double_support;
-        traj.request.t_double_support = t_double_support;
-        traj.request.t_step = t_step;
-        traj.request.t_final_double_support = t_final_double_support;
-        traj.request.step_length = step_length;
-        traj.request.COM_height = COM_height;
-        traj.request.step_count = step_count;
-        traj.request.ankle_height = ankle_height;
-        traj.request.theta = theta;
-        traj.request.dt = dt;
-        client.call(traj);
-        result = traj.response.result;
-        size_ = traj.response.traj_size;
+        robot->trajGen(step_count, t_step, alpha, t_double_support, COM_height,
+                       step_length, step_width, dt, theta, ankle_height, 
+                       step_height, false, 1, 1);
     }
 
     void commandHandler(const std_msgs::Int32 &msg){
@@ -189,9 +159,11 @@ public:
     {
         dt = io->timeStep();
         final_com_pos[2] = 0.68;
+        string config_path = ros::package::getPath("trajectory_planner") + "/config/surenav_config.json";
+        robot = new Robot(&nh, config_path);
         callGeneralTraj(2);
-        //DCM Walk
-        result = true;
+        // callTraj();
+        // size_ = robot->getTrajSize();
         ioBody = io->body();
         leftForceSensor = ioBody->findDevice<ForceSensor>("LeftAnkleForceSensor");
         rightForceSensor = ioBody->findDevice<ForceSensor>("RightAnkleForceSensor");
@@ -220,33 +192,34 @@ public:
     }
     virtual bool control() override
     {
-        ros::ServiceClient bumpSensor = nh.serviceClient<surena_simulation::bump>("/bumpSensor");
-        ros::ServiceClient jnt_client = nh.serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
-        trajectory_planner::JntAngs jntangs;
+        // ros::ServiceClient bumpSensor = nh->serviceClient<surena_simulation::bump>("/bumpSensor");
+        // ros::ServiceClient jnt_client = nh->serviceClient<trajectory_planner::JntAngs>("/jnt_angs");
+        // trajectory_planner::JntAngs jntangs;
+        size_ = robot->getTrajSize();
         if (idx < size_ - 1){
-            jntangs.request.left_ft = {float(leftForceSensor->f().z()),
-                                    float(leftForceSensor->tau().x()),
-                                    float(leftForceSensor->tau().y())};
-            jntangs.request.right_ft = {float(rightForceSensor->f().z()),
-                                    float(rightForceSensor->tau().x()),
-                                    float(rightForceSensor->tau().y())};
+            double left_ft[] = {float(leftForceSensor->f().z()),
+                                float(leftForceSensor->tau().x()),
+                                float(leftForceSensor->tau().y())};
+            double right_ft[] = {float(rightForceSensor->f().z()),
+                                 float(rightForceSensor->tau().x()),
+                                 float(rightForceSensor->tau().y())};
+
+            int right_bump[] = {0, 0, 0};
+            int left_bump[] = {0, 0, 0};
                                     
-            jntangs.request.iter = idx;
             double cur_q[ioBody->numJoints()];
+            double jnt_vel[ioBody->numJoints()];
             for(int i=0; i < ioBody->numJoints(); ++i){
                     Link* joint = ioBody->joint(i);
                     cur_q[i] = joint->q();
+                    jnt_vel[i] = (cur_q[surenaIndex_[i]] - qold[surenaIndex_[i]]) / dt;
             }
 
-            for (int j=0; j<12; j++){
-                jntangs.request.config[j] = cur_q[surenaIndex_[j]];
-                jntangs.request.jnt_vel[j] = (cur_q[surenaIndex_[j]] - qold[surenaIndex_[j]]) / dt;
-                }
-            jntangs.request.accelerometer = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
-            jntangs.request.gyro = {float(gyro->w()(0)),float(gyro->w()(1)),float(gyro->w()(2))};
+            double accelerometer[] = {accelSensor->dv()(0),accelSensor->dv()(1),accelSensor->dv()(2)};
+            double gyroscope[] = {gyro->w()(0), gyro->w()(1),gyro->w()(2)};
 
             // Getting Bump Sensor Values
-            surena_simulation::bump bump_msg;
+            // surena_simulation::bump bump_msg;
             Matrix4d l_ankle, r_ankle;
             l_ankle.block<3,1>(0, 3) = ioBody->joint(11)->position().translation();
             r_ankle.block<3,1>(0, 3) = ioBody->joint(5)->position().translation();
@@ -265,34 +238,32 @@ public:
             // cout << base_quat.w() << "," << base_quat.x() << "," << base_quat.y() << "," << base_quat.z() << endl;
             // cout << left_ankle_pos(0) << "," << left_ankle_pos(1) << "," << left_ankle_pos(2) << ",";
             // cout << right_ankle_pos(0) << "," << right_ankle_pos(1) << "," << right_ankle_pos(2) << endl;
-            for(int i = 0; i < 16; i ++){
-                bump_msg.request.left_trans[i] = l_ankle(i / 4, i % 4);
-                bump_msg.request.right_trans[i] = r_ankle(i / 4, i % 4);
-            }
-            bumpSensor.call(bump_msg);
-            jntangs.request.bump = bump_msg.response.bump_vals;
-            if (result){
+            // for(int i = 0; i < 16; i ++){
+            //     bump_msg.request.left_trans[i] = l_ankle(i / 4, i % 4);
+            //     bump_msg.request.right_trans[i] = r_ankle(i / 4, i % 4);
+            // }
+            // bumpSensor.call(bump_msg);
+            // jntangs.request.bump = bump_msg.response.bump_vals;
 
-                jnt_client.call(jntangs);
+            // jnt_client.call(jntangs);
+            robot->getJointAngs(idx, cur_q, jnt_vel, right_ft, left_ft, right_bump,
+                                    left_bump, gyroscope, accelerometer, jnt_command, status);
 
-                for (int j=0; j<12; j++)
-                    qref[surenaIndex_[j]] = jntangs.response.jnt_angs[j];
-                    
-                for(int i=0; i < ioBody->numJoints(); ++i){
-                    Link* joint = ioBody->joint(i);
-                    double q = joint->q();
-                    double dq = (q - qold[i]) / dt;
-                    double u = (qref[i] - q) * pgain[i] + (0.0 - dq) * dgain[i];
-                    qold[i] = q;
-                    joint->u() = u;
-                }
+            for (int j=0; j<12; j++)
+                qref[surenaIndex_[j]] = jnt_command[j];
+                
+            for(int i=0; i < ioBody->numJoints(); ++i){
+                Link* joint = ioBody->joint(i);
+                double q = joint->q();
+                double dq = (q - qold[i]) / dt;
+                double u = (qref[i] - q) * pgain[i] + (0.0 - dq) * dgain[i];
+                qold[i] = q;
+                joint->u() = u;
             }
             idx ++;
         }else{
             if(idx == size_ - 1){
-                ros::ServiceClient reset_client = nh.serviceClient<std_srvs::Empty>("/reset_traj");
-                std_srvs::Empty srv;
-                //reset_client.call(srv);
+                robot->resetTraj();
             }
             for(int i=0; i < ioBody->numJoints(); ++i){
                 Link* joint = ioBody->joint(i);

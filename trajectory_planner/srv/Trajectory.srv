@@ -11,6 +11,7 @@ int8 step_count
 float64 ankle_height
 float64 dt
 float64 theta
+float64 step_height
 ---
 int32 traj_size
 bool result
