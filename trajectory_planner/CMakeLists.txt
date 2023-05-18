@@ -17,7 +17,6 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   tf
   message_generation
-  choreonoid
 )
 
 # yaml-cpp include config from https://github.com/zephir-lang/zephirc/commit/4e3d1c9b35e15b368cf2be46b83eb69be6d65b53
@@ -80,6 +79,8 @@ link_directories(${YAML_CPP_LIBRARY_DIRS})
 add_service_files(
   FILES
   JntAngs.srv
+  getdata.srv
+  command.srv
   Trajectory.srv
   GeneralTraj.srv
 )
@@ -130,9 +131,9 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES trajectory_planner
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+ INCLUDE_DIRS include
+ LIBRARIES trajectory_planner
+ CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
@@ -232,8 +233,22 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 file(GLOB SOURCES "src/*.cpp")
-add_executable(trajectory_planner ${SOURCES})
-target_link_libraries(trajectory_planner ${catkin_LIBRARIES} yaml-cpp)
+add_library(${PROJECT_NAME}
+${SOURCES}
+)
+# add_executable(trajectory_planner ${SOURCES})
+target_link_libraries(trajectory_planner ${catkin_LIBRARIES}  yaml-cpp)
 add_dependencies(trajectory_planner trajectory_planner_generate_messages_cpp
 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+)
+install(
+  DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
