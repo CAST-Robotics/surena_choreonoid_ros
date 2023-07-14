@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 import numpy as np
 import rospy 
 from trajectory_planner.srv import JntAngs, Trajectory, GeneralTraj
