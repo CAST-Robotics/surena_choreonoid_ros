@@ -78,6 +78,8 @@ class Robot{
 
         inline int getTrajSize(){return dataSize_;}
 
+        // void baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat)
+
     private:
         enum ControlState {
             IDLE,

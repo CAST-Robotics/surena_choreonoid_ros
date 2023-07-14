@@ -939,44 +939,44 @@ bool Robot::resetTraj()
     return true;
 }
 
-void Robot::baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat){
+// void Robot::baseOdomPublisher(Vector3d base_pos, Vector3d base_vel, Quaterniond base_quat){
 
-    geometry_msgs::TransformStamped odom_trans;
-    odom_trans.header.stamp = ros::Time::now();
-    odom_trans.header.frame_id = "odom";
-    odom_trans.child_frame_id = "base_link";
+//     geometry_msgs::TransformStamped odom_trans;
+//     odom_trans.header.stamp = ros::Time::now();
+//     odom_trans.header.frame_id = "odom";
+//     odom_trans.child_frame_id = "base_link";
 
-    odom_trans.transform.translation.x = base_pos(0);
-    odom_trans.transform.translation.y = base_pos(1);
-    odom_trans.transform.translation.z = base_pos(2);
+//     odom_trans.transform.translation.x = base_pos(0);
+//     odom_trans.transform.translation.y = base_pos(1);
+//     odom_trans.transform.translation.z = base_pos(2);
 
-    odom_trans.transform.rotation.x = base_quat.x();
-    odom_trans.transform.rotation.y = base_quat.y();
-    odom_trans.transform.rotation.z = base_quat.z();
-    odom_trans.transform.rotation.w = base_quat.w();
+//     odom_trans.transform.rotation.x = base_quat.x();
+//     odom_trans.transform.rotation.y = base_quat.y();
+//     odom_trans.transform.rotation.z = base_quat.z();
+//     odom_trans.transform.rotation.w = base_quat.w();
     
-    baseOdomBroadcaster_.sendTransform(odom_trans);
+//     baseOdomBroadcaster_.sendTransform(odom_trans);
 
-    nav_msgs::Odometry odom;
-    odom.header.stamp = ros::Time::now();
-    odom.header.frame_id = "odom";
+//     nav_msgs::Odometry odom;
+//     odom.header.stamp = ros::Time::now();
+//     odom.header.frame_id = "odom";
 
-    odom.pose.pose.position.x = base_pos(0);
-    odom.pose.pose.position.y = base_pos(1);
-    odom.pose.pose.position.z = base_pos(2);
+//     odom.pose.pose.position.x = base_pos(0);
+//     odom.pose.pose.position.y = base_pos(1);
+//     odom.pose.pose.position.z = base_pos(2);
 
-    odom.pose.pose.orientation.x = base_quat.x();
-    odom.pose.pose.orientation.y = base_quat.y();
-    odom.pose.pose.orientation.z = base_quat.z();
-    odom.pose.pose.orientation.w = base_quat.w();
+//     odom.pose.pose.orientation.x = base_quat.x();
+//     odom.pose.pose.orientation.y = base_quat.y();
+//     odom.pose.pose.orientation.z = base_quat.z();
+//     odom.pose.pose.orientation.w = base_quat.w();
 
-    odom.twist.twist.linear.x = base_vel(0);
-    odom.twist.twist.linear.y = base_vel(1);
-    odom.twist.twist.angular.z = base_vel(2);
+//     odom.twist.twist.linear.x = base_vel(0);
+//     odom.twist.twist.linear.y = base_vel(1);
+//     odom.twist.twist.angular.z = base_vel(2);
 
-    //publish the message
-    baseOdomPub_.publish(odom);
-}
+//     //publish the message
+//     baseOdomPub_.publish(odom);
+// }
 
 Robot::~Robot(){
     delete ankleColide_;
